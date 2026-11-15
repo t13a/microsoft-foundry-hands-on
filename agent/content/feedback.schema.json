@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "アンケート",
+  "type": "object",
+  "properties": {
+    "rating": {
+      "title": "満足度",
+      "description": "1 (不満) 〜 5 (満足)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "comment": {
+      "title": "ご意見 (任意)",
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": ["rating"],
+  "additionalProperties": false
+}

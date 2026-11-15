@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "プロフィール",
+  "description": "ご案内の参考と、利用状況の集計にだけ使います。",
+  "type": "object",
+  "properties": {
+    "gender": {
+      "title": "性別",
+      "type": "string",
+      "enum": ["男性", "女性", "その他", "無回答"]
+    },
+    "age": {
+      "title": "年代",
+      "type": "string",
+      "enum": ["10歳未満", "10代", "20代", "30代", "40代", "50代", "60代", "70代", "80歳以上", "無回答"]
+    },
+    "ward": {
+      "title": "お住まいの区",
+      "type": "string",
+      "enum": ["中央区", "北区", "東区", "南区", "西区", "湖畔区", "星見区", "市外", "無回答"]
+    }
+  },
+  "required": ["gender", "age", "ward"],
+  "additionalProperties": false
+}
