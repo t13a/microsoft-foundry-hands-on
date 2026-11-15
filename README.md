@@ -41,4 +41,14 @@ npm install --prefix web/ui
 npm test --prefix web/ui
 ```
 
-SPA の開発サーバーは `npm run dev --prefix web/ui` で起動します (`/api` は localhost:8000 の BFF へ中継)。
+画面から相談を試すとき (Azure なし、スタブのモデル):
+
+```bash
+AGENT_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
+```
+
+```bash
+npm run build --prefix web/ui && uv run python -m web_api
+```
+
+http://localhost:8000 を開きます。BFF はビルドした SPA を配信し、`/api/responses` を localhost:8088 のホスト型エージェントへ中継します。SPA の開発サーバー (`npm run dev --prefix web/ui`) を使う場合、`/api` は localhost:8000 の BFF へ中継されます。

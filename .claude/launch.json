@@ -11,6 +11,15 @@
       "port": 8000
     },
     {
+      "name": "agent-stub",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "AGENT_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation"
+      ],
+      "port": 8088
+    },
+    {
       "name": "web-ui",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
