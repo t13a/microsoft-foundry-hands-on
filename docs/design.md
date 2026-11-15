@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 0.10 (ドラフト) |
+| 版 | 0.11 (ドラフト) |
 | 作成日 | 2026-11-15 |
 | 前提 | [要求仕様書](requirements.md) 0.7 |
 | 状態 | レビュー待ち。「11. 技術検証」の結果で見直す前提 |
@@ -23,6 +23,7 @@
 | 0.8 | 2026-11-15 | Foundry での技術検証 (V-2、V-3、V-5、V-6、V-7) の結果を反映。モデルを当面 `gpt-5-mini` に変更 (DR-9)。エージェントの設定、未完了の応答、URL の表記ゆれ、セッション ID の扱いを追記 |
 | 0.9 | 2026-11-16 | 要求仕様書 0.6 (デザインレビューの指摘) を反映。表示提案を承認の要らないツールと案内カードに変更 (A-2、3.2、4.1、5.2、DR-5)。入力欄の出し方を追加 |
 | 0.10 | 2026-11-16 | デザインレビューで決めた配色 (ひだまり) のトークン、市章、トップページのイラストの方針を 3.3 に追加。デザインレビューの承認を記録 |
+| 0.11 | 2026-11-16 | 段階 S3 (Azure の土台) の結果を反映。V-2、V-7、V-11、V-12 の結果、azd のレイヤー構成、web のイメージを GHCR に置く方式、Foundry 上の予約された環境変数の扱い (9.4、9.5、11) |
 
 ---
 
@@ -423,16 +424,22 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 
 ### 9.4 デプロイ
 
-- azd + Bicep (F-DEV-06)。`azd up` で、インフラ、ホスト型エージェント、`web` をデプロイする。
-- デプロイ後のフックで、次を行う。
+- azd + Bicep (F-DEV-06)。インフラは 2 つのレイヤーに分ける。`infra/foundry` は azd の Foundry 拡張が書き出したもの (`azd ai agent init --infra`) で、Foundry のアカウント、プロジェクト、モデル デプロイ、Log Analytics、Application Insights を作る。`infra/app` は自前のもので、Storage、Container Apps、ロールの割り当て、予算アラートを作り、Foundry のレイヤーの出力を使う。
+- 2 つのレイヤーは同時に流れるので、初回は `azd provision foundry`、`azd provision app` の順に分けて流す。Foundry のレイヤーのリソースグループは既定で `rg-<環境名>-foundry` になるので、`AZURE_FOUNDRY_RESOURCE_GROUP` を `AZURE_RESOURCE_GROUP` と同じにする (F-OPS-06)。
+- ホスト型エージェントはコード デプロイ (リモート ビルド)。リモート ビルドはサービスのフォルダーだけを受け取り `requirements.txt` から依存を入れるので、パッケージ前のフック (`scripts/stage-agent.sh`) が `.build/agent/` に `consultation`、共有パッケージの `catalog`、文言、`requirements.txt` (`uv export`) を組む。フックはサービスに付ける (プロジェクトのフックは `azd deploy <サービス>` では動かない)。
+- ホスト型エージェントの実行時の ID には、Foundry の利用 (Foundry User) と Blob の読み取りを付ける。ID は初回のデプロイでできるので、2 回目の `azd provision app` で割り当てる。
+- Foundry 上では `FOUNDRY_*` と `AGENT_*` の環境変数を基盤が入れる (ホスト型エージェント自身の名前や版)。自前の設定にはこの接頭辞を使わない (`CONSULTATION_MODE`、`SEARCH_AGENT_NAME`)。Agent Framework の `FoundryAgent` は `FOUNDRY_AGENT_VERSION` を読むので、版を空で明示して、プロンプト エージェントの最新版を呼ぶ。
+- 予算アラートの宛先 (`BUDGET_EMAIL`) と Basic 認証のパスワード (`BASIC_AUTH_PASSWORD`) は azd の環境にだけ置き、リポジトリに入れない。
+- デプロイ後のフック (`scripts/postprovision.sh`) で、次を行う。
   - プロンプト エージェントがなければ作成する (あれば何もしない)。
   - Blob に CSV がなければ、`data/` の CSV をアップロードする。
 - 片付けは `azd down --purge` を基本とし、リソースグループの外に残るものを README の手順に書く (F-OPS-07)。
 
 ### 9.5 コンテナー イメージの置き場所
 
-- まず Azure の中で済ませる (ホスト型エージェントはソースを送ってリモートでビルドする方式を使う)。
-- Azure の中で済ませられない場合は、リポジトリを公開し、GitHub Container Registry と GitHub Actions を使う。シークレットはリポジトリに置かない。データは架空のものだけにする。
+- ホスト型エージェントは、ソースを送ってリモートでビルドする (Container Registry は不要)。
+- `web` は Container Apps がレジストリを必要とするため、リポジトリを公開し ([t13a/microsoft-foundry-hands-on](https://github.com/t13a/microsoft-foundry-hands-on))、GitHub Actions (`.github/workflows/web-image.yml`) でビルドして GitHub Container Registry に公開イメージとして置く (DR-12)。Container Apps は認証なしで取得する。シークレットはリポジトリに置かない。データは架空のものだけにする。
+- イメージを更新したら、`azd env set WEB_IMAGE ghcr.io/...:<コミット>` のあと `azd provision app` で新しいリビジョンにする (既定は `:latest`)。
 
 ### 9.6 費用の見込み
 
@@ -543,19 +550,22 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 1. ローカル (スタブのモデル、Azure の費用なし) で V-1、V-4、V-8、V-9 を確認する。**完了** (2026-11-15、[記録](../spikes/responses-workflow/README.md))。
 2. ローカルで SPA をつなぎ、V-10 を確認する (Azure の費用なし)。**完了** (2026-11-15、[記録](../spikes/chat-ui/README.md))。
 3. Foundry のリソースとモデル デプロイを作り、V-2、V-3、V-5、V-6、V-7 を確認する。**実施** (2026-11-15、[記録](../spikes/foundry-hosted/README.md))。V-2 の残り (マネージド ID) は BFF の実装時、V-7 の課金額は反映後に確認する。
+4. 本実装を Azure に載せ、V-2、V-7、V-11、V-12 を確認する。**完了** (2026-11-16、段階 S3)。V-7 の課金額は反映後に確認する。
 
 | ID | 確認すること | 結果 / 成り立たない場合 |
 |---|---|---|
 | V-1 | `ResponsesHostServer` でワークフローをホストし、入力待ちと承認の要求が Responses の標準の項目として返り、返事で再開できるか。 | **○** 入力待ちは `function_call` (`request_info`)、承認は `mcp_approval_request` で返り、`function_call_output` / `mcp_approval_response` で再開できた |
-| V-2 | BFF からマネージド ID でホスト型エージェントの Responses の受け口を呼べるか (トークンの対象、必要なロール)。ストリーミングをそのまま中継できるか。 | **△** 利用者のトークン (対象 `https://ai.azure.com/.default`) では呼べ、相談を最後まで通せた。マネージド ID と BFF での中継は、BFF を Container Apps に置く段階で確認する |
+| V-2 | BFF からマネージド ID でホスト型エージェントの Responses の受け口を呼べるか (トークンの対象、必要なロール)。ストリーミングをそのまま中継できるか。 | **○** `web` のシステム割り当てマネージド ID (対象 `https://ai.azure.com/.default`、ロール Azure AI User) で呼べ、ストリーミングをそのまま中継できた。Basic 認証と Blob からの CSV の読み込みも動いた |
 | V-3 | `AgentExecutor` から、Foundry のプロンプト エージェントを名前で、版を固定せずに呼び出せるか。Foundry 側のツール定義と、ローカルの関数の実装を結びつけられるか。承認つきのツールが動くか。 | **○** 名前だけで呼べ、ツールの定義と実装が結びつき、承認つきのツールも動いた。エージェントに `store=False` の指定と、continuation token を外すミドルウェアが必要 (4.1) |
 | V-4 | ローカルで、モデルの代わりに決まった応答を返すスタブを使えるか。 | **○** チャットクライアント (`BaseChatClient` + `FunctionInvocationLayer`) を差し替え、ツールの呼び出しを含めて台本どおりに動かせた |
 | V-5 | 定型部を含む会話の全体が、1 つのトレースとして記録されるか。ポータルの会話の画面が使えるか。Foundry の継続評価が使えるか。 | **○ (一部)** 要求ごとに別のトレースだが、全スパンのセッション ID で相談単位にまとめられる。モデルの入出力の中身も記録される。ポータルの会話の画面と継続評価は未確認 |
 | V-6 | 緊急時の発言がコンテンツフィルターで遮断されるか。遮断されたときに 4.1 の対策が働くか。 | **遮断された** 英語の定型文が返り、応答は未完了 (`incomplete`) になった。4.1 の対策 (日本語の定型文と相談先) と、画面での未完了の扱い (3.2) を実装する |
-| V-7 | ホスト型エージェントの実際の課金額 (アイドル時を含む)。ホスト型エージェントと `web` のデプロイに Container Registry が必要か。 | **△** ホスト型エージェントのデプロイに Container Registry は不要だった。課金額は反映待ち。`web` のイメージの置き場所は BFF の段階で確認する |
+| V-7 | ホスト型エージェントの実際の課金額 (アイドル時を含む)。ホスト型エージェントと `web` のデプロイに Container Registry が必要か。 | **△** ホスト型エージェントのデプロイに Container Registry は不要だった。`web` は Container Apps がレジストリを要するため、GHCR の公開イメージにした (9.5)。課金額は反映待ち |
 | V-8 | 入力待ちの要求に、フォームの JSON Schema を載せて画面に届けられるか。 | **○** 要求の種類と付加情報 (`metadata`) が `request_info` の引数にそのまま載った |
 | V-9 | 相談部のツールの呼び出しと結果、承認の要求が、外側の Responses のストリームに現れるか。 | **○** (コードの `AgentExecutor`)。YAML の `InvokeAzureAgent` では × (DR-1) |
 | V-10 | OpenAI の JavaScript SDK で、ストリーム (`mcp_approval_request`、`request_info` を含む) を受け取れるか。assistant-ui の外部ストア用ランタイムで、文章、ツール UI、承認、フォームを扱えるか。デザイントークンにどこまで寄せられるか。 | **○** SDK で独自の項目も受け取れ、画面で相談の最初から最後まで通った。デザイントークンは CSS で反映できた。日本語入力は手元のブラウザーで問題なし (利用者が確認)。スクリーンリーダーは未確認 |
+| V-11 | 1 つの azd プロジェクトで、Foundry (ホスト型エージェント、プロジェクト) と自前の Bicep (Container Apps など) を扱えるか。 | **○** `azd ai agent init --infra` で Foundry の Bicep を `infra/foundry` のレイヤーとして書き出し、自前の `infra/app` と並べられた。レイヤーは同時に流れるので、初回は順に分けて流す (9.4) |
+| V-12 | ホスト型エージェントのリモート ビルドで、ワークスペースの共有パッケージ (`catalog`) を使えるか。 | **○** デプロイ用のフォルダーに共有パッケージを同梱し、`requirements.txt` を `uv export` で作れば動いた (9.4) |
 
 ---
 

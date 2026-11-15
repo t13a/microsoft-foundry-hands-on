@@ -52,3 +52,31 @@ npm run build --prefix web/ui && uv run python -m web_api
 ```
 
 http://localhost:8000 を開きます。BFF はビルドした SPA を配信し、`/api/responses` を localhost:8088 のホスト型エージェントへ中継します。SPA の開発サーバー (`npm run dev --prefix web/ui`) を使う場合、`/api` は localhost:8000 の BFF へ中継されます。
+
+## Azure へのデプロイ
+
+前提: [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) (azd 1.37 以上、拡張 `azure.ai.agents`)、Azure CLI。`azd auth login` と `az login` を済ませておきます。web のイメージは GitHub Actions が GHCR に置きます (`main` への push で更新)。
+
+```bash
+azd env new dev --subscription <subscription-id> --location japaneast
+```
+
+```bash
+azd env set AZURE_RESOURCE_GROUP rg-foundry-hands-on-dev && azd env set AZURE_FOUNDRY_RESOURCE_GROUP rg-foundry-hands-on-dev && azd env set AZURE_AI_PROJECT_NAME ai-project-demo-city
+```
+
+```bash
+azd env set BASIC_AUTH_PASSWORD <password> && azd env set BUDGET_EMAIL <address>
+```
+
+初回は、レイヤーを順に流してから、エージェントをデプロイし、エージェントの ID にロールを付けるため `app` をもう一度流します。
+
+```bash
+azd provision foundry && azd provision app && azd hooks run postprovision
+```
+
+```bash
+azd deploy consultation-workflow && azd provision app
+```
+
+サイトの URL は `azd env get-value WEB_URL`、ユーザー名は `demo`、パスワードは `azd env get-value BASIC_AUTH_PASSWORD` で確かめます。詳しくは [基本設計書](docs/design.md) の 9.4。

@@ -260,6 +260,9 @@ def build_agent(tools: list, mode: str | None = None) -> SupportsAgentRun:
     return FoundryAgent(
         project_endpoint=os.environ[PROJECT_ENDPOINT_ENV],
         agent_name=os.environ.get(AGENT_NAME_ENV, DEFAULT_AGENT_NAME),
+        # Empty, not None: on Foundry the platform injects FOUNDRY_AGENT_VERSION (the hosted
+        # agent's own version), which would otherwise pin the prompt agent to that version.
+        agent_version="",
         credential=DefaultAzureCredential(),
         tools=tools,
         # 会話の履歴はワークフローのホストが持つので、エージェント側には保存しない。
