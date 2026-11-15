@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: demo-city
+requiredVersions:
+    azd: ">=1.37.0"
+    extensions:
+        azure.ai.agents: ">=1.1.0"
+infra:
+    # Foundry first: the app layer uses its outputs (project, monitoring).
+    layers:
+        - name: foundry
+          path: infra/foundry
+          provider: microsoft.foundry
+        - name: app
+          path: infra/app
+hooks:
+    # Remote build gets only the service folder, so the workspace package is staged in (V-12).
+    prepackage:
+        shell: sh
+        run: ./scripts/stage-agent.sh
+services:
+    consultation-workflow:
+        host: azure.ai.agent
+        kind: hosted
+        language: python
+        description: 相談のワークフロー (Agent Framework)
+        project: .build/agent
+        codeConfiguration:
+            runtime: python_3_13
+            entryPoint: main.py
+            dependencyResolution: remote_build
+        container:
+            resources:
+                cpu: "0.5"
+                memory: 1Gi
+        protocols:
+            - protocol: responses
+              version: 2.0.0
+        env:
+            PYTHONNOUSERSITE: "1"
+            AGENT_MODE: foundry
+            FOUNDRY_AGENT_NAME: search-assistant
+        uses:
+            - ai-project
+    ai-project:
+        host: azure.ai.project
+        deployments:
+            - name: gpt-5-mini
+              model:
+                format: OpenAI
+                name: gpt-5-mini
+                version: "2025-08-07"
+              sku:
+                name: GlobalStandard
+                capacity: 10

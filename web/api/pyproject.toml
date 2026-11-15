@@ -5,6 +5,7 @@ description = "BFF: SPA の配信、カタログ API、Responses の中継"
 requires-python = ">=3.13"
 dependencies = [
     "azure-identity>=1.27.0",
+    "azure-storage-blob>=12.31.1",
     "catalog",
     "fastapi>=0.115",
     "httpx>=0.28.1",

@@ -13,3 +13,6 @@ dist/
 .agentserver/
 .azure/
 .env
+
+# Staged deploy packages
+.build/

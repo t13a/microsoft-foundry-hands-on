@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "${AZURE_LOCATION}" },
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "aiAccountName": { "value": "${AZURE_AI_ACCOUNT_NAME}" },
+    "projectEndpoint": { "value": "${FOUNDRY_PROJECT_ENDPOINT}" },
+    "logAnalyticsWorkspaceResourceId": { "value": "${AZURE_LOG_ANALYTICS_WORKSPACE_RESOURCE_ID}" },
+    "applicationInsightsResourceId": { "value": "${AZURE_APPLICATION_INSIGHTS_RESOURCE_ID}" },
+    "webImage": { "value": "${WEB_IMAGE=ghcr.io/t13a/microsoft-foundry-hands-on/web:latest}" },
+    "basicAuthPassword": { "value": "${BASIC_AUTH_PASSWORD}" },
+    "deployerPrincipalId": { "value": "${AZURE_PRINCIPAL_ID}" }
+  }
+}

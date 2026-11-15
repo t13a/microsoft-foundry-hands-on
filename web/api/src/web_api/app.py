@@ -12,6 +12,7 @@ from catalog import Catalog, Category, Service
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
+from web_api.blob import download_catalog
 from web_api.relay import RelaySettings, create_router
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -26,8 +27,10 @@ def create_app(
 ) -> FastAPI:
     """BFF のアプリを作る。
 
-    設定は引数か環境変数で渡す (CATALOG_DIR、STATIC_DIR、BASIC_AUTH_USER / BASIC_AUTH_PASSWORD)。
+    設定は引数か環境変数で渡す (CATALOG_DIR か CATALOG_BLOB_URL、STATIC_DIR、
+    BASIC_AUTH_USER / BASIC_AUTH_PASSWORD)。
     """
+    explicit_dir = catalog_dir is not None
     catalog_dir = Path(catalog_dir or os.environ.get("CATALOG_DIR", REPO_ROOT / "data"))
     static_dir = Path(static_dir or os.environ.get("STATIC_DIR", REPO_ROOT / "web/ui/dist"))
     if basic_auth is None and os.environ.get("BASIC_AUTH_PASSWORD"):
@@ -36,7 +39,9 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # Load once at startup; an invalid CSV stops the app with the violations in the log.
-        app.state.catalog = catalog.load(catalog_dir)
+        blob_url = os.environ.get("CATALOG_BLOB_URL")
+        source = download_catalog(blob_url) if blob_url and not explicit_dir else catalog_dir
+        app.state.catalog = catalog.load(source)
         yield
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
