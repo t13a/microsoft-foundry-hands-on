@@ -19,6 +19,7 @@
 | `consultation.yaml`、`main_declarative.py` | 宣言型 (YAML) のワークフロー: 案内 → フォーム → 発言 → `InvokeAzureAgent` |
 | `main_code.py` | 同じ流れをコードで組んだもの (`WorkflowBuilder` + `AgentExecutor`) |
 | `main_approval.py` | 通常のツールと承認が必要なツールを呼ぶエージェント (台本どおりに動くスタブ) |
+| `main_v10.py` | 相談の流れ全体 (進行役 + 相談役、フォーム、承認、終了、アンケート)。V-10 の画面の検証に使った ([spikes/chat-ui](../chat-ui/README.md)) |
 
 起動: `uv run python main_code.py` (localhost:8088 の `/responses`)。
 

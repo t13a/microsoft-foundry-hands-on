@@ -1,0 +1,180 @@
+/* Design tokens from the requirements (5.3). */
+:root {
+  --header: #deb887;
+  --surface: #fffff0;
+  --bubble-assistant: #faebd7;
+  --bubble-assistant-border: #deb887;
+  --bubble-user: #8b4513;
+  --action: #1f2b6c;
+  --notice-bg: #ffe4b5;
+  --notice-text: #a94442;
+  --radius: 0.6em;
+  --shadow: 0 0.2em 0.2em rgba(0, 0, 0, 0.3);
+  font-family: 'Hiragino Kaku Gothic ProN', Meiryo, 'Noto Sans JP', sans-serif;
+  font-size: 17px;
+  color: #222;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+}
+
+.header {
+  grid-column: 1 / -1;
+  background: var(--header);
+  padding: 0.6em 1em;
+  font-weight: bold;
+}
+
+.chat {
+  border-right: 1px solid var(--bubble-assistant-border);
+  min-height: 0;
+}
+
+.content {
+  padding: 1.5em;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.thread-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1em;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  margin-bottom: 0.8em;
+}
+
+.message.user {
+  align-items: flex-end;
+}
+
+.bubble {
+  margin: 0;
+  padding: 0.6em 0.9em;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-width: 90%;
+  white-space: pre-wrap;
+}
+
+.message.assistant .bubble {
+  background: var(--bubble-assistant);
+  border: 1px solid var(--bubble-assistant-border);
+}
+
+.message.user .bubble {
+  background: var(--bubble-user);
+  color: #fff;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.action {
+  background: var(--action);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.5em 1em;
+  font: inherit;
+  cursor: pointer;
+}
+
+.action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.action.secondary {
+  align-self: flex-start;
+}
+
+.answer {
+  margin: 0;
+  align-self: flex-end;
+  background: var(--bubble-user);
+  color: #fff;
+  padding: 0.3em 0.8em;
+  border-radius: var(--radius);
+}
+
+.confirm,
+.schema-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+}
+
+.field select,
+.field input,
+.field textarea {
+  font: inherit;
+  padding: 0.3em;
+}
+
+.tool-status {
+  margin: 0;
+  font-size: 0.8em;
+  color: #777;
+}
+
+.notice {
+  margin: 0 1em;
+  padding: 0.3em;
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  font-weight: bold;
+  text-align: center;
+  border-radius: var(--radius);
+  font-size: 0.85em;
+}
+
+.composer {
+  display: flex;
+  gap: 0.5em;
+  padding: 0.6em 1em 1em;
+}
+
+.composer-input {
+  flex: 1;
+  font: inherit;
+  padding: 0.4em;
+  resize: none;
+}
+
+.finished {
+  text-align: center;
+  color: #777;
+}
