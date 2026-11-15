@@ -1,6 +1,7 @@
 """ホスト型エージェントのサーバー (localhost:8088 の `/responses`)。
 
-`AGENT_MODE=stub` でスタブ、`AGENT_MODE=foundry` (既定) で Foundry のプロンプト エージェントを使う。
+`CONSULTATION_MODE=stub` でスタブ、`CONSULTATION_MODE=foundry` (既定) で
+Foundry のプロンプト エージェントを使う。
 """
 
 import logging

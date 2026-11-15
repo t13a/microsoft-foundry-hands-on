@@ -44,7 +44,7 @@ npm test --prefix web/ui
 画面から相談を試すとき (Azure なし、スタブのモデル):
 
 ```bash
-AGENT_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
+CONSULTATION_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
 ```
 
 ```bash

@@ -27,6 +27,11 @@ upload_if_missing() {
   fi
 }
 
+if [ -z "${CATALOG_STORAGE_ACCOUNT:-}" ]; then
+  echo "app layer not provisioned yet; skipping the catalog upload and the prompt agent"
+  exit 0
+fi
+
 uv run catalog validate data
 retry upload_if_missing categories.csv
 retry upload_if_missing services.csv

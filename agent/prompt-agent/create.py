@@ -6,7 +6,7 @@
 使い方:
     FOUNDRY_PROJECT_ENDPOINT=... uv run python agent/prompt-agent/create.py [model-deployment]
 
-エージェント名は FOUNDRY_AGENT_NAME (既定 search-assistant)、モデルは引数か
+エージェント名は SEARCH_AGENT_NAME (既定 search-assistant)、モデルは引数か
 AZURE_AI_MODEL_DEPLOYMENT_NAME (既定 gpt-5-mini)。要: Foundry User ロール。
 """
 
@@ -36,7 +36,7 @@ def definition(model: str) -> PromptAgentDefinition:
 
 
 def main() -> None:
-    name = os.environ.get("FOUNDRY_AGENT_NAME", DEFAULT_AGENT_NAME)
+    name = os.environ.get("SEARCH_AGENT_NAME", DEFAULT_AGENT_NAME)
     model = sys.argv[1] if len(sys.argv) > 1 else None
     model = model or os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", DEFAULT_MODEL)
     with (

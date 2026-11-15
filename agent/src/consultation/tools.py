@@ -17,7 +17,6 @@ from catalog import Catalog, CategoryLocation, SearchLocation
 from pydantic import Field
 
 DATA_DIR_ENV = "CATALOG_DIR"
-DEFAULT_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 
 # 探索の結果に載せる数の上限。件数 (count) は上限に関係なく全体の数を返す。
 MAX_SERVICES = 20
@@ -33,7 +32,11 @@ APPROVAL_REQUIRED = frozenset({"propose_end"})
 @cache
 def load_catalog(directory: Path | None = None) -> Catalog:
     """カタログを読み込む。セッションの実行環境で 1 回だけ読む (基本設計書 7.1)。"""
-    return catalog.load(directory or Path(os.environ.get(DATA_DIR_ENV) or DEFAULT_DATA_DIR))
+    if directory is None:
+        env = os.environ.get(DATA_DIR_ENV)
+        # The repository's data/ when run from a checkout (the deploy package sets CATALOG_DIR).
+        directory = Path(env) if env else Path(__file__).resolve().parents[3] / "data"
+    return catalog.load(directory)
 
 
 def _json(value: Any) -> str:

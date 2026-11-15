@@ -10,7 +10,7 @@ FIXTURE_DATA = Path(__file__).resolve().parents[2] / "packages/catalog/tests/fix
 def environment(monkeypatch, tmp_path):
     # data/ はまだないので、カタログのテスト用データを使う。
     monkeypatch.setenv("CATALOG_DIR", str(FIXTURE_DATA))
-    monkeypatch.setenv("AGENT_MODE", "stub")
+    monkeypatch.setenv("CONSULTATION_MODE", "stub")
     monkeypatch.setenv("AGENTSERVER_STATE_ROOT", str(tmp_path / "agentserver"))
     monkeypatch.delenv("STUB_SCENARIO", raising=False)
     monkeypatch.delenv("CONSULTATION_CONTENT_DIR", raising=False)

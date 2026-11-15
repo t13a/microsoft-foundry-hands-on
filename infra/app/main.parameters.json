@@ -11,6 +11,7 @@
     "webImage": { "value": "${WEB_IMAGE=ghcr.io/t13a/microsoft-foundry-hands-on/web:latest}" },
     "basicAuthPassword": { "value": "${BASIC_AUTH_PASSWORD}" },
     "deployerPrincipalId": { "value": "${AZURE_PRINCIPAL_ID}" },
+    "agentPrincipalId": { "value": "${AGENT_CONSULTATION_WORKFLOW_INSTANCE_IDENTITY_PRINCIPAL_ID=}" },
     "budgetEmail": { "value": "${BUDGET_EMAIL=}" }
   }
 }

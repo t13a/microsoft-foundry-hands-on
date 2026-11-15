@@ -17,21 +17,21 @@ Foundry のホスト型エージェントとして動く、相談のワークフ
 スタブ (Azure なし):
 
 ```bash
-AGENT_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
+CONSULTATION_MODE=stub AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
 ```
 
 Foundry のプロンプト エージェントを使う:
 
 ```bash
-AGENT_MODE=foundry FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project> AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
+CONSULTATION_MODE=foundry FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project> AGENTSERVER_STATE_ROOT=.agentserver uv run python -m consultation
 ```
 
 | 環境変数 | 既定 | 内容 |
 |---|---|---|
-| `AGENT_MODE` | `foundry` | `stub` か `foundry` |
+| `CONSULTATION_MODE` | `foundry` | `stub` か `foundry` |
 | `STUB_SCENARIO` | `default` | スタブの台本 (`default`、`category`、`multiple`、`search`、`fabricated`、`content_filter`、`content_filter_error`。中身は `stub.py` の冒頭) |
 | `FOUNDRY_PROJECT_ENDPOINT` | — | Foundry プロジェクトのエンドポイント (`foundry` のとき) |
-| `FOUNDRY_AGENT_NAME` | `search-assistant` | 呼び出すプロンプト エージェントの名前 (版は固定しない) |
+| `SEARCH_AGENT_NAME` | `search-assistant` | 呼び出すプロンプト エージェントの名前 (版は固定しない) |
 | `CATALOG_DIR` | リポジトリの `data/` | カタログの CSV の場所 (BFF と同じ名前) |
 | `CONSULTATION_CONTENT_DIR` | `agent/content` | 文言とフォームの場所 |
 | `AGENTSERVER_STATE_ROOT` | `~/.agentserver` | ローカルのワークフローの状態の保存先 |

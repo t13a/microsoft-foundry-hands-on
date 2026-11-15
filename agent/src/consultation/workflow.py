@@ -43,9 +43,9 @@ from consultation import tools as tool_impl
 
 logger = logging.getLogger(__name__)
 
-AGENT_MODE_ENV = "AGENT_MODE"
+AGENT_MODE_ENV = "CONSULTATION_MODE"
 PROJECT_ENDPOINT_ENV = "FOUNDRY_PROJECT_ENDPOINT"
-AGENT_NAME_ENV = "FOUNDRY_AGENT_NAME"
+AGENT_NAME_ENV = "SEARCH_AGENT_NAME"
 DEFAULT_AGENT_NAME = "search-assistant"
 
 # 相談役への発言に添える文脈の見出し。スタブの台本もこの見出しで読み取る。
@@ -240,7 +240,7 @@ async def drop_continuation_tokens(
 
 
 def build_agent(tools: list, mode: str | None = None) -> SupportsAgentRun:
-    """相談役のエージェントを作る。`AGENT_MODE=stub` ならスタブ、`foundry` (既定) なら
+    """相談役のエージェントを作る。`CONSULTATION_MODE=stub` ならスタブ、`foundry` (既定) なら
     Foundry のプロンプト エージェントを名前で (版を固定せずに) 呼ぶ。"""
     mode = mode or os.environ.get(AGENT_MODE_ENV, "foundry")
     if mode == "stub":

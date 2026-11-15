@@ -36,6 +36,9 @@ param basicAuthPassword string
 @description('Principal that runs azd, granted write access to the catalog container to upload the CSV.')
 param deployerPrincipalId string = ''
 
+@description('Instance identity of the hosted agent (known after its first deploy). Calls the prompt agent and reads the catalog.')
+param agentPrincipalId string = ''
+
 @description('Monthly budget for this resource group, in the billing currency (N-COST-04).')
 param budgetAmount int = 1000
 
@@ -181,6 +184,26 @@ resource deployerWritesCatalog 'Microsoft.Authorization/roleAssignments@2022-04-
   properties: {
     principalId: deployerPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributor)
+  }
+}
+
+resource agentUsesFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(agentPrincipalId)) {
+  scope: aiAccount
+  name: guid(aiAccount.id, agentPrincipalId, azureAiUser)
+  properties: {
+    principalId: agentPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', azureAiUser)
+  }
+}
+
+resource agentReadsCatalog 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(agentPrincipalId)) {
+  scope: storage
+  name: guid(storage.id, agentPrincipalId, storageBlobDataReader)
+  properties: {
+    principalId: agentPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataReader)
   }
 }
 

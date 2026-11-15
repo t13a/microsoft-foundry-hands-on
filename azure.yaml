@@ -14,16 +14,19 @@ infra:
         - name: app
           path: infra/app
 hooks:
-    # Remote build gets only the service folder, so the workspace package is staged in (V-12).
-    prepackage:
-        shell: sh
-        run: ./scripts/stage-agent.sh
     postprovision:
         shell: sh
         run: ./scripts/postprovision.sh
 services:
     consultation-workflow:
+        name: consultation-workflow
         host: azure.ai.agent
+        hooks:
+            # Remote build gets only the service folder, so the workspace package is staged
+            # in (V-12). Runs from the service folder, which the script recreates.
+            prepackage:
+                shell: sh
+                run: ../../scripts/stage-agent.sh
         kind: hosted
         language: python
         description: 相談のワークフロー (Agent Framework)
@@ -41,8 +44,9 @@ services:
               version: 2.0.0
         env:
             PYTHONNOUSERSITE: "1"
-            AGENT_MODE: foundry
-            FOUNDRY_AGENT_NAME: search-assistant
+            # FOUNDRY_* and AGENT_* are reserved for platform-injected values.
+            CONSULTATION_MODE: foundry
+            SEARCH_AGENT_NAME: search-assistant
         uses:
             - ai-project
     ai-project:
@@ -55,4 +59,4 @@ services:
                 version: "2025-08-07"
               sku:
                 name: GlobalStandard
-                capacity: 10
+                capacity: 50
