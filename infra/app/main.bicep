@@ -184,6 +184,16 @@ resource deployerWritesCatalog 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
+// The deployer creates the prompt agent after provisioning (scripts/postprovision.sh).
+resource deployerUsesFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId)) {
+  scope: aiAccount
+  name: guid(aiAccount.id, deployerPrincipalId, azureAiUser)
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', azureAiUser)
+  }
+}
+
 // --- Budget alert (N-COST-04) ---
 
 resource budget 'Microsoft.Consumption/budgets@2023-11-01' = if (!empty(budgetEmail)) {

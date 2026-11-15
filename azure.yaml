@@ -18,6 +18,9 @@ hooks:
     prepackage:
         shell: sh
         run: ./scripts/stage-agent.sh
+    postprovision:
+        shell: sh
+        run: ./scripts/postprovision.sh
 services:
     consultation-workflow:
         host: azure.ai.agent
