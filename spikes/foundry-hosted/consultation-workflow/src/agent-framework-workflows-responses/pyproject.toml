@@ -1,0 +1,12 @@
+[project]
+name = "agent-framework-workflows-responses"
+version = "0.1.0"
+description = "A Microsoft Foundry hosted agent built with Microsoft Agent Framework."
+requires-python = ">=3.13"
+dependencies = [
+    # Pinned to the versions verified in spikes/responses-workflow.
+    "agent-framework-core==1.26.0",
+    "agent-framework-foundry==1.16.2",
+    "agent-framework-foundry-hosting==1.0.0b261112",
+    "debugpy",
+]

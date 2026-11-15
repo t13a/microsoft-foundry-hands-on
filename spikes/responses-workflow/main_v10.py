@@ -147,11 +147,13 @@ class ScriptedChatClient(FunctionInvocationLayer, BaseChatClient):
 
 
 def _ended(response: AgentExecutorResponse) -> bool:
-    for message in response.agent_response.messages:
-        for content in message.contents:
-            if content.type == "function_result" and (content.call_id or "").startswith("end-"):
-                return "ended" in str(content.result)
-    return False
+    """True when this agent turn includes propose_end's approved result.
+
+    After an approval the agent resumes, and the resumed response holds the function result
+    but not the original function call, so match the result itself (only propose_end returns "ended").
+    """
+    contents = [c for m in response.agent_response.messages for c in m.contents]
+    return any(c.type == "function_result" and "ended" in str(c.result) for c in contents)
 
 
 class Coordinator(Executor):
