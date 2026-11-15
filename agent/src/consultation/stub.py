@@ -11,12 +11,12 @@
 - `multiple`: 検索で見つかった同じカテゴリのサービスを 2 つまとめて案内カードにする。
 - `search`: 検索結果のページを案内カードにする。
 - `fabricated`: 最初は存在しない URL を作り出して表示提案し、弾かれたらやり直す。
-- `content_filter`: 最初の相談の発言で、応答がコンテンツフィルターで遮断される。
-- `content_filter_error`: 最初の相談の発言で、要求がコンテンツフィルターで弾かれる (例外)。
+- `content_filter`: 緊急の言葉を含む発言で、応答がコンテンツフィルターで遮断される (未完了)。
+- `content_filter_error`: 緊急の言葉を含む発言で、要求がコンテンツフィルターで弾かれる (例外)。
 
 どの台本でも、発言に応じて次のように進む: 案内カードから表示した (opened) → 「見つかりましたか？」と
 選択肢、「見つかった」→「ほかにお探しのものは？」と選択肢、「ない」「終わり」→ 終了の提案、
-緊急の言葉 → 緊急時の案内。
+緊急の言葉 → 緊急時の案内 (遮断の台本を除く)。
 """
 
 import json
@@ -107,11 +107,9 @@ class ScriptedChatClient(FunctionInvocationLayer, BaseChatClient):
             call = calls.get(results[-1].call_id)
             name = call.name if call else None
             return self._after_tool(name, _parsed(results[-1].result), messages), None
-        return self._after_user(last.text or "", messages)
+        return self._after_user(last.text or "")
 
-    def _after_user(
-        self, message: str, messages: Sequence[Message]
-    ) -> tuple[list[Content], str | None]:
+    def _after_user(self, message: str) -> tuple[list[Content], str | None]:
         text = _labeled(message, TEXT_LABEL)
         text = message if text is None else text
         if _labeled(message, EVENT_LABEL) == OPENED_NOTE:
@@ -120,12 +118,14 @@ class ScriptedChatClient(FunctionInvocationLayer, BaseChatClient):
                 _call("suggest_replies", options=FOUND_OPTIONS),
             ], None
         if any(word in text for word in EMERGENCY_WORDS):
+            # 技術検証 (V-6) では、自殺をほのめかす発言がコンテンツフィルターで遮断された。
+            if self.scenario == "content_filter":
+                return [_text(FILTERED_TEXT)], "content_filter"
+            if self.scenario == "content_filter_error":
+                raise ChatClientContentFilterException(
+                    "The prompt was blocked by the content filter"
+                )
             return [_text("緊急の相談先をご案内します。"), _call("show_emergency_contacts")], None
-        first = sum(1 for m in messages if m.role == "user") == 1
-        if first and self.scenario == "content_filter":
-            return [_text(FILTERED_TEXT)], "content_filter"
-        if first and self.scenario == "content_filter_error":
-            raise ChatClientContentFilterException("The prompt was blocked by the content filter")
         if text.strip() == FOUND:
             return [
                 _text("よかったです。ほかにお探しのものはありますか？"),

@@ -52,7 +52,7 @@ class Driver:
 
     client: OpenAI
     hosted: bool = False
-    approve_end: bool = True
+    reject_end: int = 0  # 最初の何回の終了の提案を却下するか
     skip_feedback: bool = False
     log: Callable[[str], None] = print
     current_url: str = "/"
@@ -117,12 +117,14 @@ class Driver:
             None,
         )
         if approval:
-            self.log(f"> {'approve' if self.approve_end else 'reject'} {approval['name']}")
+            approve = self.reject_end <= 0
+            self.reject_end -= 1
+            self.log(f"> {'approve' if approve else 'reject'} {approval['name']}")
             return [
                 {
                     "type": "mcp_approval_response",
                     "approval_request_id": approval["id"],
-                    "approve": self.approve_end,
+                    "approve": approve,
                 }
             ]
         if not pending:
@@ -161,7 +163,7 @@ def main() -> None:
     parser.add_argument("base_url", nargs="?", default="http://localhost:8088")
     parser.add_argument("steps", nargs="*", help="発言の並び (@open で案内カードを表示)")
     parser.add_argument("--token", action="store_true", help="Entra ID のトークンを付ける")
-    parser.add_argument("--reject-end", action="store_true", help="終了の提案を却下する")
+    parser.add_argument("--reject-end", action="store_true", help="最初の終了の提案を却下する")
     parser.add_argument("--skip-feedback", action="store_true", help="アンケートをスキップする")
     parser.add_argument("--interactive", action="store_true", help="標準入力から発言を読む")
     args = parser.parse_args()
@@ -180,7 +182,7 @@ def main() -> None:
     Driver(
         client,
         hosted=args.token,
-        approve_end=not args.reject_end,
+        reject_end=int(args.reject_end),
         skip_feedback=args.skip_feedback,
     ).run(steps)
 

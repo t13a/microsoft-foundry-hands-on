@@ -70,10 +70,11 @@ def compose_message(profile: dict[str, Any], schema: dict[str, Any], reply: dict
 
     URL はモデルが読めるようにデコードして添える (ツールの照らし合わせは表記の違いを吸収する)。
     """
-    titles = {key: prop.get("title", key) for key, prop in schema.get("properties", {}).items()}
-    lines = [
-        PROFILE_LABEL + " " + "、".join(f"{titles.get(k, k)}: {v}" for k, v in profile.items())
-    ]
+    properties = schema.get("properties", {})
+    # チェックポイントを経ると項目の順が変わるので、フォームの順に並べる。
+    keys = [k for k in properties if k in profile] + [k for k in profile if k not in properties]
+    items = (f"{properties.get(k, {}).get('title', k)}: {profile[k]}" for k in keys)
+    lines = [PROFILE_LABEL + " " + "、".join(items)]
     if url := reply.get("url"):
         lines.append(f"{URL_LABEL} {unquote(str(url))}")
     if reply.get("event") == "opened":

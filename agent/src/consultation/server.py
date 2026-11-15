@@ -4,17 +4,19 @@
 """
 
 import logging
+from typing import Any
 
 from agent_framework_foundry_hosting import ResponsesHostServer
 
 from consultation.workflow import build_workflow, checkpoint_store_provider, parse_response
 
 
-def create_server() -> ResponsesHostServer:
+def create_server(**kwargs: Any) -> ResponsesHostServer:
     return ResponsesHostServer(
         workflow=build_workflow,
         parse_response=parse_response,
         checkpoint_store_provider=checkpoint_store_provider(),
+        **kwargs,
     )
 
 
