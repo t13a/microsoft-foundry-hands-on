@@ -2,9 +2,9 @@
 
 | 項目 | 内容 |
 |---|---|
-| 版 | 0.4 (ドラフト) |
+| 版 | 0.5 (ドラフト) |
 | 作成日 | 2026-11-15 |
-| 前提 | [要求仕様書](requirements.md) 0.3 |
+| 前提 | [要求仕様書](requirements.md) 0.4 |
 | 状態 | レビュー待ち。「11. 技術検証」の結果で見直す前提 |
 
 本書は要求仕様書の要件 ID (F-xxx、N-xxx) を参照する。設計の結論だけを書き、検討の経緯と採らなかった案は「10. 設計判断」にまとめる。
@@ -16,6 +16,7 @@
 | 0.1 | 2026-11-15 | 初版 |
 | 0.2 | 2026-11-15 | モデルを `gpt-6-luna` に変更。ホスティングを Container Apps に決定。CSV の読み込みを起動時だけに簡略化。アイドル タイムアウトを既定の 15 分に戻す。コンテナー イメージの置き場所の方針 |
 | 0.3 | 2026-11-15 | チャット UI を assistant-ui に変更。フォームを JSON Schema に変更。推奨の選択肢と終了の提案をツールに変更。表示提案の URL を探索のツールが返す形に変更 |
+| 0.5 | 2026-11-15 | ローカルの技術検証の結果を反映。ワークフローの定義を YAML からコードに変更。利用者の発言も入力待ちへの返事 (`function_call_output`) として送る形に変更。会話の続け方を `previous_response_id` に変更 |
 | 0.4 | 2026-11-15 | プロトコルを Responses に統一 (ホスト型エージェント、BFF、画面)。Responses から画面の表示への変換は画面側で行い、ストリームの解析は OpenAI の JavaScript SDK に任せる。結論だけの構成に整理し、設計判断の章を設けた |
 
 ---
@@ -24,7 +25,7 @@
 
 | # | 方針 | 主な根拠 |
 |---|---|---|
-| A-1 | **会話の流れ (ワークフロー) と、会話の中身 (エージェント) を分ける。** 流れはホスト型エージェント上の Agent Framework の YAML で、中身は Foundry ポータルで管理するプロンプト エージェントで実装する。 | F-WF-02、F-OPS-01、02 |
+| A-1 | **会話の流れ (ワークフロー) と、会話の中身 (エージェント) を分ける。** 流れはホスト型エージェント上の Agent Framework のワークフロー (コードで定義するグラフ) で、中身は Foundry ポータルで管理するプロンプト エージェントで実装する。 | F-WF-02、F-OPS-01、02 |
 | A-2 | **表示前の確認には、ツール呼び出しの承認の仕組みを使う。** 確認の手順をエージェントの指示文に頼らず、仕組みとして強制する。 | F-AGT-21 |
 | A-3 | **エージェントは URL を組み立てない。** 探索のツールが実在するデータから作った URL を返し、エージェントはそれをそのまま表示提案に渡す。 | F-AGT-22、F-SITE-07 |
 | A-4 | **サイトとエージェントは、データの読み込みと検索の実装を共有する。** エージェントが見た結果と、利用者が開いた画面の結果を一致させる。 | F-AGT-20、F-SITE-09 |
@@ -47,7 +48,7 @@ flowchart LR
             WEB["web<br/>BFF (FastAPI) + SPA の配信<br/>Basic 認証 / Responses の中継"]
         end
         subgraph Foundry["Microsoft Foundry プロジェクト"]
-            HA["ホスト型エージェント<br/>consultation-workflow<br/>(Agent Framework の YAML ワークフロー)"]
+            HA["ホスト型エージェント<br/>consultation-workflow<br/>(Agent Framework のワークフロー)"]
             PA["プロンプト エージェント<br/>search-assistant<br/>(モデル・指示文・ツール定義)"]
             MD["モデル デプロイ<br/>gpt-6-luna (Global Standard)"]
             ST[("状態ストア<br/>会話・チェックポイント・承認")]
@@ -60,7 +61,7 @@ flowchart LR
 
     UI -- "Responses<br/>(Basic 認証)" --> WEB
     WEB -- "Responses<br/>(マネージド ID)" --> HA
-    HA -- "Responses<br/>(InvokeAzureAgent)" --> PA
+    HA -- "Responses" --> PA
     PA --> MD
     HA --- ST
     WEB -- "読み取り" --> BLOB
@@ -78,7 +79,7 @@ flowchart LR
 |---|---|---|
 | SPA | サイト (コンテンツ領域) とチャット領域の画面。Responses のストリームを画面の表示に変換する | TypeScript、React、Vite、React Router、assistant-ui、OpenAI JavaScript SDK |
 | BFF (`web`) | SPA の配信、Basic 認証、カタログ API、Responses の中継 (マネージド ID のトークンの付与)、送信頻度の制限。状態を持たない | Python、FastAPI、Azure Container Apps |
-| ホスト型エージェント (`consultation-workflow`) | ワークフローの実行 (定型部、相談ループ、終了、フィードバック)。エージェントのツールの実装 | Python、Microsoft Agent Framework (宣言型 YAML、Foundry hosting)、Foundry Agent Service (Responses プロトコル) |
+| ホスト型エージェント (`consultation-workflow`) | ワークフローの実行 (定型部、相談ループ、終了、フィードバック)。エージェントのツールの実装 | Python、Microsoft Agent Framework (ワークフロー、Foundry hosting)、Foundry Agent Service (Responses プロトコル) |
 | プロンプト エージェント (`search-assistant`) | 相談部の会話。モデル、指示文、ツールの定義を持つ | Foundry Agent Service |
 | カタログ (共有パッケージ) | CSV の読み込み、検証、検索、URL の生成。BFF とホスト型エージェントで共有する | Python |
 | Blob Storage | CSV の正本。バージョン管理で過去の版を保持 | Azure Storage |
@@ -101,19 +102,23 @@ Python のプロジェクトは uv のワークスペースで管理し、カタ
 
 アダプターは、ホスト型エージェントの Responses のストリームを次のように画面に表示し、利用者の操作を次の要求として送る。
 
+ワークフローの入力待ちは、名前が `request_info` の `function_call` として届く。引数の `request` に、待ち受けの種類 (`request_type`) と付加情報 (`metadata`) が入る。
+
 | ストリームの内容 | 画面の表示 | 利用者の操作と、次の要求 |
 |---|---|---|
 | 文章の差分 (`response.output_text.delta`) | アシスタントの吹き出しに少しずつ表示する | — |
-| 利用者の発言の待ち受け (ワークフローの入力待ち) | 入力欄を有効にする | 発言を通常の入力メッセージとして送る |
-| フォームの待ち受け (ワークフローの入力待ち、JSON Schema 付き) | JSON Schema からフォームを描画する (F-PRF-02、F-END-03) | 入力値を `function_call_output` として送る |
+| `request_info` (`request_type: user_message`) | 入力欄を有効にする | 発言と今見ている URL を `function_call_output` として送る |
+| `request_info` (`request_type: form`、`metadata` に JSON Schema) | JSON Schema からフォームを描画する (F-PRF-02、F-END-03) | 入力値を `function_call_output` として送る |
 | `propose_display` の承認の要求 (`mcp_approval_request`) | 「〈summary〉が見つかりましたが、表示しますか？ はい / いいえ」 | `mcp_approval_response` を送る |
-| `propose_display` の結果 (表示する URL) | コンテンツ領域を遷移させる (モバイルではコンテンツ領域に切り替える)。会話履歴には「カテゴリを表示」「検索結果を表示」ボタンを残す (F-UI-05) | ボタンで再表示する (要求は送らない) |
+| `propose_display` の結果 (`function_call_output`、表示する URL) | コンテンツ領域を遷移させる (モバイルではコンテンツ領域に切り替える)。会話履歴には「カテゴリを表示」「検索結果を表示」ボタンを残す (F-UI-05) | ボタンで再表示する (要求は送らない) |
 | `propose_end` の承認の要求 | 「相談を終了しますか？ はい / いいえ」 | `mcp_approval_response` を送る |
 | `suggest_replies` の呼び出し | 推奨の選択肢のボタン (F-AGT-04) | 選んだ文言を発言として送る |
 | `show_emergency_contacts` の呼び出し | 定型の緊急時の案内 (文言は SPA の設定ファイルに持つ) | — |
+| 探索のツール (`list_categories` など) の呼び出しと結果 | 表示しない (または「調べています」程度の表示) | — |
 | 待ち受けのないまま応答が完了 | 相談の完了。「新しい相談を始める」を表示する (F-WF-05) | — |
 
-- 利用者が今見ている URL は、要求に添えて送る (F-AGT-27)。
+- サーバー側で実行済みのツールは、`function_call` の直後に同じ `call_id` の `function_call_output` が届く。届かない `function_call` (`request_info`) だけが、画面からの返事を待っている。
+- 入力待ちの間は、通常の入力メッセージを送れない (ワークフローのホストが受け付けない)。利用者の発言も、待ち受けへの返事として送る。
 - 承認の要求と結果は、ツール名ごとに登録した描画用の部品 (ツール UI) で表示する。
 - フォームは 2 種類だけなので、JSON Schema からの描画は自作する。
 
@@ -123,33 +128,43 @@ Python のプロジェクトは uv のワークスペースで管理し、カタ
 
 ### 4.1 流れ
 
-YAML のループ (`GotoAction`) で相談部を組み、利用者の発言ごとにプロンプト エージェントを呼び出す。
+ワークフローは、進行役 (`Coordinator`) と相談役 (`AgentExecutor`) の 2 つの部品からなるグラフとして、コードで定義する。進行役が定型部と流れの判断を受け持ち、相談役がプロンプト エージェントとの会話を受け持つ。
+
+```mermaid
+flowchart LR
+    C["Coordinator (進行役)<br/>案内、フォーム、発言の待ち受け、<br/>終了の判定、フィードバック"]
+    A["AgentExecutor (相談役)<br/>search-assistant"]
+    C -- "利用者の発言<br/>(プロフィールと現在の URL を添える)" --> A
+    A -- "エージェントの応答" --> C
+```
+
+進行役の流れ:
 
 ```mermaid
 flowchart TD
-    S([開始]) --> G["SendActivity<br/>利用上の注意・アンケートの予告"]
-    G --> P["RequestExternalInput<br/>プロフィールのフォーム<br/>(forms/profile.schema.json)"]
-    P --> L{{"相談ループ"}}
-    L --> U["RequestExternalInput<br/>利用者の発言"]
-    U --> A["InvokeAzureAgent<br/>search-assistant"]
+    S([開始]) --> G["案内を出力"]
+    G --> P["入力待ち: プロフィールのフォーム"]
+    P --> U["入力待ち: 利用者の発言"]
+    U --> A["相談役に渡す"]
     A --> C{"終了か？<br/>(propose_end が承認された<br/>または やり取りが 30 回)"}
-    C -- いいえ --> L
-    C -- はい --> F["RequestExternalInput<br/>フィードバックのフォーム<br/>(forms/feedback.schema.json)"]
-    F --> T["SendActivity<br/>お礼"]
+    C -- いいえ --> U
+    C -- はい --> F["入力待ち: フィードバックのフォーム"]
+    F --> T["お礼を出力"]
     T --> E([終了])
 ```
 
 | 項目 | 設計 |
 |---|---|
-| 定義ファイル | `agent/workflows/consultation.yaml` |
-| ホスト | Agent Framework の Responses ホスト (`ResponsesHostServer`) で、ワークフローをそのままホストする。YAML から組み立てたワークフローを、要求ごとに作り直す工場関数で渡す |
-| 要求の解釈 | 要求を解釈する関数 (`parse_response`) を自作し、次のように対応づける。通常の入力メッセージ → 利用者の発言の待ち受けへの返事。`function_call_output` → フォームの待ち受けへの返事。`mcp_approval_response` → 承認の要求への返事 |
-| 状態の保存 | ワークフローのチェックポイントと承認待ちの状態は、Foundry の状態ストアに保存する (ホストの既定)。返事は保存された待ち受けと照合され、古い返事や重複した返事は弾かれる |
-| フォーム | 項目を JSON Schema で `agent/forms/` に置き、`RequestExternalInput` から参照する (F-PRF-04) |
-| 相談部 | `InvokeAzureAgent` でプロンプト エージェントを名前で呼び出す |
-| 終了の判定 | `propose_end` が承認されたことと、やり取りの回数の変数を `If` で評価する (F-END-02、F-AGT-40) |
-| プロフィール | ワークフローの変数に保存し、エージェントへの入力に文脈として含める (F-PRF-06) |
-| 現在の URL | 要求に添えられた URL を、エージェントへの入力に文脈として含める (F-AGT-27) |
+| 定義 | `agent/workflow.py` (グラフと進行役)。流れの図は `WorkflowViz` で定義から生成する |
+| 内容のデータ | 案内とお礼の文言、フォームの JSON Schema、やり取りの上限を `agent/content/` に置く (F-DEV-02、F-PRF-04) |
+| ホスト | Agent Framework の Responses ホスト (`ResponsesHostServer`) で、ワークフローをそのままホストする。ワークフロー、部品、エージェント、クライアント、**ツール**を要求ごとに作り直す工場関数で渡す (使い回すとホストが拒否する) |
+| 入力待ち | 進行役が `request_info` で待ち受ける。要求には種類 (`user_message` / `form`) と付加情報 (フォームの JSON Schema) を載せる |
+| 要求の解釈 | 要求を解釈する関数 (`parse_response`) は、返事 (`function_call_output`、`mcp_approval_response`) を含む要求なら待ち受けへの返事として、それ以外なら相談の開始として扱う |
+| 状態の保存 | ワークフローのチェックポイントと承認待ちの状態は、Foundry の状態ストアに保存する (ホストの既定)。返事は保存された待ち受けと照合され、古い返事や重複した返事は弾かれる。チェックポイントに入る独自の型は、許可する型の一覧に登録する |
+| 相談部 | `AgentExecutor` でプロンプト エージェントを呼び出す。文章、ツールの呼び出しと結果、承認の要求は、そのまま外側の応答に流れる |
+| 終了の判定 | 進行役が、相談役の応答に含まれる `propose_end` の結果と、やり取りの回数で判定する (F-END-02、F-AGT-40) |
+| プロフィール | 進行役が保持し、相談役に渡す発言に文脈として添える (F-PRF-06) |
+| 現在の URL | 発言の返事に添えられた URL を、相談役に渡す発言に文脈として添える (F-AGT-27) |
 | コンテンツフィルターで遮断された場合 | 定型の文言で「内容を処理できませんでした」と伝え、同じ文面に緊急時の相談先を添える |
 
 ---
@@ -241,7 +256,6 @@ flowchart TD
 |---|---|
 | `GET /api/categories/{path...}` | カテゴリページのデータ |
 | `GET /api/search?q=` | キーワード検索 |
-| `POST /api/conversations` | 会話の作成。Foundry の会話の作成を中継する |
 | `POST /api/responses` | 応答の作成 (ストリーミング)。ホスト型エージェントの Responses の受け口へ中継し、SSE をそのまま返す |
 | その他のパス | SPA の配信 (存在しないパスは `index.html` を返す) |
 
@@ -256,10 +270,10 @@ BFF はプロトコルを変換せず、状態も持たない。
 
 ### 6.2 会話とセッション
 
-- SPA は会話 ID をメモリにだけ持つ。ページを再読み込みすると会話は消える (F-WF-04)。チャット領域を閉じても SPA のメモリに残るので、続きから再開できる。
-- 会話の履歴は Foundry が管理する。
+- 相談は、最初の応答から `previous_response_id` で順につないでいく。SPA は、直前の応答の ID と、ホスト型エージェントのセッション ID (`agent_session_id`) をメモリにだけ持ち、毎回の要求に入れる。ページを再読み込みすると会話は消える (F-WF-04)。チャット領域を閉じても SPA のメモリに残るので、続きから再開できる。
+- ワークフローの状態は、セッションごとに Foundry の状態ストアに保存される。
 - ホスト型エージェントのアイドル タイムアウトは既定の 15 分のままにする。
-- BFF はマネージド ID で呼び出すため、Foundry から見た利用者は全員同じになる。利用者どうしの区別は、推測できない会話 ID に頼る (認証なしの PoC として許容する)。
+- BFF はマネージド ID で呼び出すため、Foundry から見た利用者は全員同じになる。利用者どうしの区別は、推測できないセッション ID に頼る (認証なしの PoC として許容する)。
 
 ### 6.3 利用量の制限
 
@@ -327,8 +341,8 @@ BFF はプロトコルを変換せず、状態も持たない。
 
 - ホスト型エージェントの受け口のライブラリが OpenTelemetry を組み込んでおり、プロジェクトにつないだ Application Insights へ自動で送る。Agent Framework のワークフロー、エージェント、ツールの呼び出しは、その下の階層として記録される。
 - 会話の中身も記録する (架空データの PoC のため、メッセージ内容の記録を有効にする)。
-- エージェントの詳しい動き (ツール呼び出し、トークン数、会話ごとの履歴) は Foundry ポータルのトレースと会話の画面で見る。
-- ワークフローは、相談の開始、プロフィール、表示提案と応答、フィードバックをイベントとして記録する。すべてに会話 ID を付ける。
+- エージェントの詳しい動き (ツール呼び出し、トークン数) は Foundry ポータルのトレースで見る。ポータルの会話の画面が使えるかは V-5 で確認する。
+- ワークフローは、相談の開始、プロフィール、表示提案と応答、フィードバックをイベントとして記録する。すべてにセッション ID を付け、相談ごとにまとめられるようにする。
 - Azure Portal のブック (Workbook) を Bicep でデプロイし、次を表示する。
   - 会話の一覧 (日時、プロフィール、やり取りの回数、満足度)
   - 会話の詳細 (発言、表示提案と応答、フィードバックの自由記述)
@@ -389,11 +403,18 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 
 ## 10. 設計判断
 
-### DR-1: ワークフローの実行基盤
+### DR-1: ワークフローの実行基盤と定義方式
 
-- **決定**: ホスト型エージェントの上で、Microsoft Agent Framework の宣言型 (YAML) ワークフローを動かす。言語は Python。
-- **理由**: Foundry の宣言型ワークフロー (ポータルのデザイナー) は 2026-12-01 に廃止され、新規開発には Agent Framework が推奨されている。ワークフローをそのままホストできるのは Python だけ。
-- **採らなかった案**: Foundry のワークフロー (廃止予定)。GUI でフローを作れる OSS (Langflow など。Foundry の SDK との統合が弱い)。ワークフローを BFF の中で動かす (ホスト型エージェントを使わなくなる。V-1 が成り立たない場合の代替)。
+- **決定**: ホスト型エージェントの上で、Microsoft Agent Framework のワークフローを動かす。ワークフローのグラフはコード (Python) で定義し、文言やフォームなどの内容はデータファイルに分ける。.NET は使わない。
+- **理由**:
+  - Foundry の宣言型ワークフロー (ポータルのデザイナー) は 2026-12-01 に廃止され、新規開発には Agent Framework が推奨されている。ワークフローをそのままホストできるのは Python だけ。
+  - 技術検証で、コードで組んだワークフロー (`AgentExecutor`) なら、文章のストリーミング、ツールの呼び出しと結果の外出し、ツールの承認がすべて動くことを確認した。
+  - 公式資料でも、複雑な独自の処理や細かい制御が必要な場合はコードが推奨されている。
+- **採らなかった案**:
+  - 宣言型 (YAML) のワークフロー: エージェントを呼び出すアクション (`InvokeAzureAgent`) が、ストリーミングせず最後の文章を 1 回だけ出す。ツールの呼び出しと結果を外に出さず、ツールの承認にも対応していない (Python 版 1.5.1 で確認)。また、式 (`=...`) の評価に .NET ランタイムが必要で、コンテナーの肥大化、起動の遅れ、メモリの増加、ビルド方式の制約を招く。YAML 自体は 2026 年 7 月に 1.0 となっており、廃止の予定はない。
+  - YAML の `InvokeAzureAgent` を自作の部品に差し替える: 非公開の仕組みに手を入れることになり、更新で壊れやすい。
+  - Foundry のワークフロー (廃止予定)。GUI でフローを作れる OSS (Langflow など。Foundry の SDK との統合が弱い)。
+  - ワークフローを BFF の中で動かす (ホスト型エージェントを使わなくなる)。
 
 ### DR-2: 会話の中身はプロンプト エージェント
 
@@ -403,7 +424,7 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 ### DR-3: プロトコルは Responses に統一
 
 - **決定**: 画面 → BFF → ホスト型エージェント → プロンプト エージェントを、すべて Responses API でつなぐ。BFF は中継だけを行う。
-- **理由**: Foundry の標準の形で、会話の履歴、ワークフローのチェックポイント、承認待ちの状態の保存が基盤に組み込まれている (A-6)。ワークフローの入力待ちと承認の要求は、Responses の標準の項目 (`function_call`、`mcp_approval_request`) で返り、標準の項目 (`function_call_output`、`mcp_approval_response`) で再開できる。ポータルの会話の画面も使える。プロンプト エージェントは Responses でしか呼べないため、全体がそろう。
+- **理由**: Foundry の標準の形で、ワークフローのチェックポイントと承認待ちの状態の保存が基盤に組み込まれている (A-6)。ワークフローの入力待ちと承認の要求は、Responses の標準の項目 (`function_call`、`mcp_approval_request`) で返り、標準の項目 (`function_call_output`、`mcp_approval_response`) で再開できる (技術検証で確認)。プロンプト エージェントは Responses でしか呼べないため、全体がそろう。
 - **採らなかった案**:
   - ホスト型エージェントを Invocations にして AG-UI を流す: AG-UI への変換、セッションの対応づけ、状態の保存先を自分で組み合わせる必要がある。ポータルの会話の画面が使えない。
   - BFF で AG-UI に変換する (Agent Framework の AG-UI 連携を BFF に置く): 承認待ちの状態が BFF のメモリに残り、スケール ゼロや再起動で再開できなくなる。変換が 2 段になり、フォームの入力待ちの扱いが確認できない。プレビュー版の機能への依存が増える。
@@ -411,7 +432,7 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 ### DR-4: チャット UI は assistant-ui、Responses の解析は OpenAI の SDK
 
 - **決定**: チャット領域は assistant-ui で作る。Responses の送受信とストリームの解析は OpenAI の公式 JavaScript SDK に任せ、イベントを assistant-ui の表示に対応づける部分だけを自作する。
-- **理由**: assistant-ui は npm で入れる React の部品集で、ツール呼び出しを専用の部品で描画でき、日本語入力、スクリーンリーダー、自動スクロールなどのチャットの基本が揃っている。assistant-ui には Responses 用の既製のランタイムがない (既製品は Vercel AI SDK、LangGraph、AG-UI、A2A、Mastra 向け)。また、今回の Responses の使い方には独自の意味づけがある。ワークフローの入力待ち (発言、フォーム) が `function_call` として、ローカルのツールの承認が `mcp_approval_request` として返ってくる。この対応づけはどの既製品にもないため、自作は避けられない。ただし、ストリームの解析まで自作する必要はなく、OpenAI の SDK が型付きのイベントとして返してくれる。BFF の API (`/api/responses`、`/api/conversations`) は、SDK の接続先を `/api` にすればそのまま使える形にしてある。
+- **理由**: assistant-ui は npm で入れる React の部品集で、ツール呼び出しを専用の部品で描画でき、日本語入力、スクリーンリーダー、自動スクロールなどのチャットの基本が揃っている。assistant-ui には Responses 用の既製のランタイムがない (既製品は Vercel AI SDK、LangGraph、AG-UI、A2A、Mastra 向け)。また、今回の Responses の使い方には独自の意味づけがある。ワークフローの入力待ち (発言、フォーム) が `function_call` として、ローカルのツールの承認が `mcp_approval_request` として返ってくる。この対応づけはどの既製品にもないため、自作は避けられない。ただし、ストリームの解析まで自作する必要はなく、OpenAI の SDK が型付きのイベントとして返してくれる。BFF の API (`/api/responses`) は、SDK の接続先を `/api` にすればそのまま使える形にしてある。
 - **採らなかった案**:
   - Vercel AI SDK のランタイム + AI SDK の OpenAI Responses 用プロバイダー: 解析は成熟しているが、モデルの API を直接呼ぶ前提で作られている (モデル名の指定、ツール定義の送信、ツール実行のループ)。ホスト型エージェントの入力待ちの意味づけとは合わない。
   - Bot Framework Web Chat (ビルド済みの JavaScript を埋め込む使い方が基本で、大きく制御しづらい)。CopilotKit (Node.js のサーバーが別に必要)。OpenAI ChatKit (部品を OpenAI の CDN から読み込む必要がある)。すべて手書き (チャットの基本を自分で作る量が多い)。
@@ -471,21 +492,22 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 
 進め方:
 
-1. ローカルで、ホスト型エージェント (Responses ホスト) と SPA をつなぎ、V-1、V-3、V-4、V-8、V-9、V-10 を確認する (Azure の費用はモデルの呼び出しだけ)。
-2. Foundry にデプロイして、V-2、V-5、V-6、V-7 を確認する。
+1. ローカル (スタブのモデル、Azure の費用なし) で V-1、V-4、V-8、V-9 を確認する。**完了** (2026-11-15、[記録](../spikes/responses-workflow/README.md))。
+2. ローカルで SPA をつなぎ、V-10 を確認する (Azure の費用なし)。
+3. Foundry のリソースとモデル デプロイを作り、V-2、V-3、V-5、V-6、V-7 を確認する。
 
-| ID | 確認すること | 成り立たない場合 |
+| ID | 確認すること | 結果 / 成り立たない場合 |
 |---|---|---|
-| V-1 | `ResponsesHostServer` で YAML のワークフローをホストし、入力待ち (利用者の発言、フォーム、承認) が Responses の標準の項目として返るか。自作の `parse_response` で、通常の入力メッセージを利用者の発言の待ち受けへの返事に対応づけられるか。 | 相談ループをコードのワークフローで書く。それでも難しければ、ワークフローを BFF の中で動かす (DR-1) |
-| V-2 | BFF からマネージド ID でホスト型エージェントの Responses の受け口を呼べるか (トークンの対象、必要なロール)。会話の作成とストリーミングをそのまま中継できるか。 | — (必須) |
-| V-3 | ワークフローから、Foundry のプロンプト エージェントを名前で、版を固定せずに呼び出せるか。Foundry 側のツール定義と、ローカルの関数の実装を結びつけられるか。 | ワークフローから Foundry のモデルを直接呼び出し、指示文とモデル名を Foundry 側の別の仕組みから読む |
-| V-4 | ローカルで、プロンプト エージェントの代わりに決まった応答を返すスタブを使えるか (`register_agent` に自作のエージェントを渡す)。 | チャットクライアントの層で差し替える |
-| V-5 | 定型部を含む会話の全体が、1 つの会話・トレースとして記録されるか。Foundry の継続評価が使えるか。 | ワークフローが記録するイベントで補う。継続評価は評価用スクリプト (8.1) で代える |
-| V-6 | 緊急時の発言がコンテンツフィルターで遮断されるか。遮断されたときに 4.1 の対策が働くか。 | 実装後に一緒に検討する |
-| V-7 | ホスト型エージェントの実際の課金額 (アイドル時を含む)。ホスト型エージェントと `web` のデプロイに Container Registry が必要か。 | GitHub Container Registry と GitHub Actions を使う (DR-12) |
-| V-8 | YAML の `RequestExternalInput` から JSON Schema のフォームを指定し、画面に届けられるか。 | `Question` で 1 項目ずつ入力する (F-PRF-05) |
-| V-9 | `InvokeAzureAgent` の中のツールの呼び出しと結果、承認の要求が、外側の Responses のストリームに現れるか。`propose_end` が承認されたことを YAML の条件で判定できるか。 | 相談ループをコードのワークフローで書く |
-| V-10 | OpenAI の JavaScript SDK で、BFF 経由のホスト型エージェントのストリーム (`mcp_approval_request`、入力待ちの `function_call` を含む) を受け取れるか。assistant-ui の自作ランタイム用の仕組みで、文章、ツール UI、承認、フォームを扱えるか。デザイントークンにどこまで寄せられるか。 | ストリームの解析を自作する。それでも合わなければチャット領域を手書きにする |
+| V-1 | `ResponsesHostServer` でワークフローをホストし、入力待ちと承認の要求が Responses の標準の項目として返り、返事で再開できるか。 | **○** 入力待ちは `function_call` (`request_info`)、承認は `mcp_approval_request` で返り、`function_call_output` / `mcp_approval_response` で再開できた |
+| V-2 | BFF からマネージド ID でホスト型エージェントの Responses の受け口を呼べるか (トークンの対象、必要なロール)。ストリーミングをそのまま中継できるか。 | 未。— (必須) |
+| V-3 | `AgentExecutor` から、Foundry のプロンプト エージェントを名前で、版を固定せずに呼び出せるか。Foundry 側のツール定義と、ローカルの関数の実装を結びつけられるか。承認つきのツールが動くか。 | 未。ワークフローから Foundry のモデルを直接呼び出し、指示文とモデル名を Foundry 側の別の仕組みから読む |
+| V-4 | ローカルで、モデルの代わりに決まった応答を返すスタブを使えるか。 | **○** チャットクライアント (`BaseChatClient` + `FunctionInvocationLayer`) を差し替え、ツールの呼び出しを含めて台本どおりに動かせた |
+| V-5 | 定型部を含む会話の全体が、1 つのトレースとして記録されるか。ポータルの会話の画面が使えるか。Foundry の継続評価が使えるか。 | 未。ワークフローが記録するイベントで補う。継続評価は評価用スクリプト (8.1) で代える |
+| V-6 | 緊急時の発言がコンテンツフィルターで遮断されるか。遮断されたときに 4.1 の対策が働くか。 | 未。実装後に一緒に検討する |
+| V-7 | ホスト型エージェントの実際の課金額 (アイドル時を含む)。ホスト型エージェントと `web` のデプロイに Container Registry が必要か。 | 未。GitHub Container Registry と GitHub Actions を使う (DR-12) |
+| V-8 | 入力待ちの要求に、フォームの JSON Schema を載せて画面に届けられるか。 | **○** 要求の種類と付加情報 (`metadata`) が `request_info` の引数にそのまま載った |
+| V-9 | 相談部のツールの呼び出しと結果、承認の要求が、外側の Responses のストリームに現れるか。 | **○** (コードの `AgentExecutor`)。YAML の `InvokeAzureAgent` では × (DR-1) |
+| V-10 | OpenAI の JavaScript SDK で、BFF 経由のストリーム (`mcp_approval_request`、`request_info` を含む) を受け取れるか。assistant-ui の自作ランタイム用の仕組みで、文章、ツール UI、承認、フォームを扱えるか。デザイントークンにどこまで寄せられるか。 | 未。ストリームの解析を自作する。それでも合わなければチャット領域を手書きにする |
 
 ---
 
@@ -496,11 +518,11 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 ├── azure.yaml               # azd の定義
 ├── infra/                   # Bicep
 ├── agent/                   # ホスト型エージェント (Python)
-│   ├── workflows/consultation.yaml
-│   ├── forms/               # フォーム (JSON Schema)
+│   ├── workflow.py          # ワークフローのグラフと進行役
+│   ├── content/             # 案内の文言、フォーム (JSON Schema)、上限の値
 │   ├── prompt-agent/        # プロンプト エージェントの指示文とツール定義の初期版
 │   ├── tools/               # ツールの実装
-│   └── stub/                # ローカル用のスタブ エージェント
+│   └── stub/                # ローカル用のスタブのチャットクライアント
 ├── web/
 │   ├── api/                 # BFF (FastAPI)
 │   └── ui/                  # SPA (React + TypeScript)
@@ -515,8 +537,9 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 
 | 対象 | 起動方法 | 備考 |
 |---|---|---|
-| ホスト型エージェント | `azd ai agent run` (localhost:8088) | 環境変数で、スタブか実モデルかを切り替える (F-DEV-04) |
+| ホスト型エージェント | `uv run python` で直接起動 (localhost:8088)。azd を入れた後は `azd ai agent run` でもよい | 環境変数で、スタブか実モデルかを切り替える (F-DEV-04) |
 | BFF | `uvicorn` | ローカルのホスト型エージェントに中継する。トークンは付けない |
+| 状態 | `AGENTSERVER_STATE_ROOT` (既定は `~/.agentserver`) | ローカルのワークフローの状態の保存先。リポジトリ内の無視されるディレクトリに向ける |
 | SPA | Vite の開発サーバー | BFF へ中継する |
 | データ | `data/` の CSV | — |
 
