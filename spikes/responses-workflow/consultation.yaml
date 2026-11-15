@@ -1,0 +1,35 @@
+kind: Workflow
+trigger:
+  kind: OnConversationStart
+  id: consultation
+  actions:
+    - kind: SendActivity
+      id: greet
+      activity: "ご利用ありがとうございます。生成 AI を使って窓口をご案内します。"
+
+    - kind: RequestExternalInput
+      id: ask_profile
+      requestType: form
+      metadata:
+        form: profile
+      prompt:
+        text: "プロフィールを入力してください。"
+      variable: Local.profile
+
+    - kind: RequestExternalInput
+      id: ask_message
+      requestType: user_message
+      prompt:
+        text: "ご用件をどうぞ。"
+      variable: Local.userMessage
+
+    - kind: InvokeAzureAgent
+      id: call_agent
+      agent:
+        name: SearchAssistant
+      input:
+        messages: =Local.userMessage
+
+    - kind: SendActivity
+      id: bye
+      activity: "ご相談ありがとうございました。"

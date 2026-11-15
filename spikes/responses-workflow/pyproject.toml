@@ -1,0 +1,10 @@
+[project]
+name = "responses-workflow"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "agent-framework-core>=1.26.0",
+    "agent-framework-declarative>=1.5.1",
+    "agent-framework-foundry>=1.16.2",
+    "agent-framework-foundry-hosting>=1.0.0b261112",
+]
