@@ -10,6 +10,7 @@
     "applicationInsightsResourceId": { "value": "${AZURE_APPLICATION_INSIGHTS_RESOURCE_ID}" },
     "webImage": { "value": "${WEB_IMAGE=ghcr.io/t13a/microsoft-foundry-hands-on/web:latest}" },
     "basicAuthPassword": { "value": "${BASIC_AUTH_PASSWORD}" },
-    "deployerPrincipalId": { "value": "${AZURE_PRINCIPAL_ID}" }
+    "deployerPrincipalId": { "value": "${AZURE_PRINCIPAL_ID}" },
+    "budgetEmail": { "value": "${BUDGET_EMAIL=}" }
   }
 }

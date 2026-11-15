@@ -36,6 +36,15 @@ param basicAuthPassword string
 @description('Principal that runs azd, granted write access to the catalog container to upload the CSV.')
 param deployerPrincipalId string = ''
 
+@description('Monthly budget for this resource group, in the billing currency (N-COST-04).')
+param budgetAmount int = 1000
+
+@description('Address that receives budget alerts. Kept in the azd environment (BUDGET_EMAIL), not in the repository.')
+param budgetEmail string = ''
+
+@description('First day of the budget period. Fixed, because a budget cannot move its start date.')
+param budgetStartDate string = '2026-11-01'
+
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var tags = { 'azd-env-name': environmentName }
 var catalogContainer = 'catalog'
@@ -172,6 +181,41 @@ resource deployerWritesCatalog 'Microsoft.Authorization/roleAssignments@2022-04-
   properties: {
     principalId: deployerPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributor)
+  }
+}
+
+// --- Budget alert (N-COST-04) ---
+
+resource budget 'Microsoft.Consumption/budgets@2023-11-01' = if (!empty(budgetEmail)) {
+  name: 'budget-${environmentName}'
+  properties: {
+    category: 'Cost'
+    amount: budgetAmount
+    timeGrain: 'Monthly'
+    timePeriod: { startDate: budgetStartDate }
+    notifications: {
+      actual50: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 50
+        thresholdType: 'Actual'
+        contactEmails: [budgetEmail]
+      }
+      actual100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Actual'
+        contactEmails: [budgetEmail]
+      }
+      forecast100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Forecasted'
+        contactEmails: [budgetEmail]
+      }
+    }
   }
 }
 
