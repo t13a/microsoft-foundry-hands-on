@@ -1,7 +1,4 @@
-"""BFF: カタログ API、SPA の配信、Basic 認証 (基本設計書 6 章、9.3)。
-
-Responses の中継 (`POST /api/responses`) は段階 S5 で足す。
-"""
+"""BFF: カタログ API、Responses の中継、SPA の配信、Basic 認証 (基本設計書 6 章、9.3)。"""
 
 import base64
 import os
@@ -10,9 +7,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import catalog
+import httpx
 from catalog import Catalog, Category, Service
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
+
+from web_api.relay import RelaySettings, create_router
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -21,6 +21,8 @@ def create_app(
     catalog_dir: Path | str | None = None,
     static_dir: Path | str | None = None,
     basic_auth: tuple[str, str] | None = None,
+    relay: RelaySettings | None = None,
+    agent_client: httpx.AsyncClient | None = None,
 ) -> FastAPI:
     """BFF のアプリを作る。
 
@@ -51,6 +53,8 @@ def create_app(
                     headers={"WWW-Authenticate": 'Basic realm="demo-city", charset="UTF-8"'},
                 )
             return await call_next(request)
+
+    app.include_router(create_router(relay or RelaySettings.from_env(), agent_client))
 
     @app.get("/api/categories")
     def top(request: Request) -> dict:

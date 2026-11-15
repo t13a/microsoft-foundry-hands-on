@@ -1,9 +1,12 @@
+import json
 from pathlib import Path
 from urllib.parse import unquote
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from web_api.app import create_app
+from web_api.relay import RateLimiter, RelaySettings
 
 SMALL = Path(__file__).parents[3] / "packages/catalog/tests/fixtures/small"
 
@@ -73,3 +76,94 @@ def test_invalid_catalog_stops_startup(tmp_path, static):
     with pytest.raises(Exception, match="ファイルがありません"):
         with TestClient(create_app(tmp_path / "data", static)):
             pass
+
+
+# --- Responses relay ---
+
+
+def upstream_recorder():
+    seen: list[dict] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append({"url": str(request.url), "body": json.loads(request.content)})
+        if json.loads(request.content).get("input") == "boom":
+            return httpx.Response(400, json={"error": {"message": "bad"}})
+        stream = b'event: response.created\ndata: {"type":"response.created"}\n\n'
+        return httpx.Response(
+            200, stream=httpx.ByteStream(stream), headers={"content-type": "text/event-stream"}
+        )
+
+    return seen, httpx.AsyncClient(transport=httpx.MockTransport(handle))
+
+
+def relay_client(static, **settings):
+    seen, upstream = upstream_recorder()
+    app = create_app(SMALL, static, relay=RelaySettings(**settings), agent_client=upstream)
+    return seen, TestClient(app)
+
+
+def test_relay_streams_and_keeps_only_allowed_fields(static):
+    seen, client = relay_client(static, url="http://agent/responses")
+    with client:
+        response = client.post(
+            "/api/responses",
+            json={
+                "input": "start",
+                "agent_session_id": "abc",
+                "previous_response_id": None,
+                "model": "other-model",
+                "tools": [{"type": "web_search"}],
+            },
+        )
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "response.created" in response.text
+    assert seen == [
+        {
+            "url": "http://agent/responses",
+            "body": {"input": "start", "agent_session_id": "abc", "stream": True},
+        }
+    ]
+
+
+def test_relay_leaves_the_first_session_to_the_platform(static):
+    seen, client = relay_client(static, platform_sessions=True)
+    with client:
+        client.post("/api/responses", json={"input": "start", "agent_session_id": "own"})
+        client.post(
+            "/api/responses",
+            json={"input": [], "agent_session_id": "platform", "previous_response_id": "r1"},
+        )
+    assert "agent_session_id" not in seen[0]["body"]
+    assert seen[1]["body"]["agent_session_id"] == "platform"
+
+
+def test_relay_passes_errors_through(static):
+    _, client = relay_client(static)
+    with client:
+        response = client.post("/api/responses", json={"input": "boom"})
+    assert response.status_code == 400
+    assert response.json() == {"error": {"message": "bad"}}
+
+
+def test_relay_limits_requests_per_ip(static):
+    _, client = relay_client(static, rate_limit_per_minute=2)
+    with client:
+        codes = [
+            client.post(
+                "/api/responses", json={"input": "x"}, headers={"x-forwarded-for": "1.1.1.1"}
+            ).status_code
+            for _ in range(3)
+        ]
+        other = client.post(
+            "/api/responses", json={"input": "x"}, headers={"x-forwarded-for": "2.2.2.2"}
+        )
+    assert codes == [200, 200, 429]
+    assert other.status_code == 200
+
+
+def test_rate_limiter_forgets_after_a_minute():
+    now = [0.0]
+    limiter = RateLimiter(1, clock=lambda: now[0])
+    assert limiter.allow("a") and not limiter.allow("a")
+    now[0] = 60
+    assert limiter.allow("a")

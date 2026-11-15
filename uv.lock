@@ -2684,15 +2684,19 @@ name = "web-api"
 version = "0.1.0"
 source = { editable = "web/api" }
 dependencies = [
+    { name = "azure-identity" },
     { name = "catalog" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-identity", specifier = ">=1.27.0" },
     { name = "catalog", editable = "packages/catalog" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
 
