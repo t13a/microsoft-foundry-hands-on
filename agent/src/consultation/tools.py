@@ -16,7 +16,7 @@ from agent_framework import FunctionTool, tool
 from catalog import Catalog, CategoryLocation, SearchLocation
 from pydantic import Field
 
-DATA_DIR_ENV = "CATALOG_DATA_DIR"
+DATA_DIR_ENV = "CATALOG_DIR"
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 
 # 探索の結果に載せる数の上限。件数 (count) は上限に関係なく全体の数を返す。

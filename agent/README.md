@@ -32,7 +32,7 @@ AGENT_MODE=foundry FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.
 | `STUB_SCENARIO` | `default` | スタブの台本 (`default`、`category`、`multiple`、`search`、`fabricated`、`content_filter`、`content_filter_error`。中身は `stub.py` の冒頭) |
 | `FOUNDRY_PROJECT_ENDPOINT` | — | Foundry プロジェクトのエンドポイント (`foundry` のとき) |
 | `FOUNDRY_AGENT_NAME` | `search-assistant` | 呼び出すプロンプト エージェントの名前 (版は固定しない) |
-| `CATALOG_DATA_DIR` | リポジトリの `data/` | カタログの CSV の場所。`data/` がまだなければ `packages/catalog/tests/fixtures/small` を指定する |
+| `CATALOG_DIR` | リポジトリの `data/` | カタログの CSV の場所 (BFF と同じ名前) |
 | `CONSULTATION_CONTENT_DIR` | `agent/content` | 文言とフォームの場所 |
 | `AGENTSERVER_STATE_ROOT` | `~/.agentserver` | ローカルのワークフローの状態の保存先 |
 | `PORT` | `8088` | 待ち受けるポート |
