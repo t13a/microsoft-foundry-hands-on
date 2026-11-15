@@ -10,6 +10,8 @@ dependencies = [
     "agent-framework-foundry==1.16.2",
     "agent-framework-foundry-hosting==1.0.0b261112",
     # Imported directly; versions come from the agent framework's dependencies.
+    "azure-ai-projects",
+    "azure-core",
     "azure-identity",
     "openai",
     "opentelemetry-api",

@@ -1,0 +1,88 @@
+[
+  {
+    "name": "list_categories",
+    "description": "子カテゴリの名前、説明の冒頭、URL を返す。path が空なら最上位のカテゴリを返す。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "カテゴリパス (上の階層から順にカテゴリ名を並べる)。空なら最上位"
+        }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_category",
+    "description": "カテゴリの説明の全文と URL、子カテゴリ (URL つき)、所属サービス (強調表示つきの URL つき) を返す。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "カテゴリパス (上の階層から順にカテゴリ名を並べる)"
+        }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "search_services",
+    "description": "キーワードでサービスを検索し、一致したサービス (カテゴリパスと強調表示つきの URL つき)、件数、検索結果の URL を返す。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "検索語 (空白区切りで AND)" }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "propose_display",
+    "description": "見つかった内容の案内カードを利用者に出す。表示する URL と件数が返る。URL が存在しなければ「表示できませんでした」が返る。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "urls": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "探索のツールが返した URL をそのまま並べる。同じカテゴリのサービスだけをまとめられる"
+        }
+      },
+      "required": ["urls"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "suggest_replies",
+    "description": "利用者に推奨の選択肢をボタンで示す。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "推奨する選択肢の文言"
+        }
+      },
+      "required": ["options"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "propose_end",
+    "description": "相談を終了してよいか、利用者に確認する。承認されると相談が終わる。",
+    "parameters": { "type": "object", "properties": {}, "required": [], "additionalProperties": false }
+  },
+  {
+    "name": "show_emergency_contacts",
+    "description": "緊急時の相談先 (警察、消防・救急、相談ダイヤル) の定型の案内を画面に表示する。",
+    "parameters": { "type": "object", "properties": {}, "required": [], "additionalProperties": false }
+  }
+]

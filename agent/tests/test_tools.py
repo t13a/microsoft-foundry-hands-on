@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import json
 from pathlib import Path
 from urllib.parse import quote
@@ -160,3 +161,25 @@ def test_tools_return_json_without_escaping(data):
 def test_tools_are_created_per_request(data):
     first, second = tools.build_tools(data), tools.build_tools(data)
     assert all(a is not b for a, b in zip(first, second, strict=True))
+
+
+def test_prompt_agent_tool_definitions_match_the_implementation(data):
+    definitions = json.loads((PROMPT_AGENT / "tools.json").read_text(encoding="utf-8"))
+    implemented = {t.name: t.parameters() for t in tools.build_tools(data)}
+    assert [d["name"] for d in definitions] == list(implemented)
+    for d in definitions:
+        properties = d["parameters"]["properties"]
+        assert set(properties) == set(implemented[d["name"]].get("properties", {})), d["name"]
+        # strict モードでは、すべての項目を必須にする。
+        assert d["parameters"]["required"] == list(properties)
+        assert d["parameters"]["additionalProperties"] is False
+
+
+def test_prompt_agent_definition_can_be_built():
+    spec = importlib.util.spec_from_file_location("create", PROMPT_AGENT / "create.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    definition = module.definition("gpt-5-mini")
+    assert "「見つかりました。」とだけ" in definition.instructions
+    assert "お探しのものは見つかりましたか？" in definition.instructions
+    assert [t.name for t in definition.tools][3] == "propose_display"
