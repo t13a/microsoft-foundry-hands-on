@@ -5,12 +5,17 @@ Usage: uv run python drive.py [base_url] [--token]
 """
 
 import json
+import os
 import sys
 import uuid
 
 from openai import OpenAI
 
-MESSAGES = ["子どもの予防接種について知りたい", "今日の天気を教えて", "ありがとう、もう大丈夫です。終わりにします"]
+MESSAGES = json.loads(os.environ.get("DRIVE_MESSAGES", "null")) or [
+    "子どもの予防接種について知りたい",
+    "今日の天気を教えて",
+    "ありがとう、もう大丈夫です。終わりにします",
+]
 PROFILE = {"gender": "無回答", "age": "30代", "ward": "中央区"}
 FEEDBACK = {"rating": 5, "comment": "わかりやすかった"}
 
