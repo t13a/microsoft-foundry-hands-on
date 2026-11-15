@@ -2,15 +2,36 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npm run build --prefix web/ui && if [ -f data/categories.csv ]; then export CATALOG_DIR=data; else export CATALOG_DIR=packages/catalog/tests/fixtures/small; fi && uv run python -m web_api"
+      ],
+      "port": 8000
+    },
+    {
       "name": "web-ui",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "npm run build --prefix web/ui && npm run preview --prefix web/ui -- --port 4173 --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "npm run build --prefix web/ui && npm run preview --prefix web/ui -- --port 4173 --strictPort"
+      ],
       "port": 4173
     },
     {
       "name": "spike-chat-ui",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "preview", "--prefix", "spikes/chat-ui", "--", "--port", "4173", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "preview",
+        "--prefix",
+        "spikes/chat-ui",
+        "--",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
       "port": 4173
     }
   ]
