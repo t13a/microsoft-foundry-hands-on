@@ -662,7 +662,11 @@ dependencies = [
     { name = "agent-framework-core" },
     { name = "agent-framework-foundry" },
     { name = "agent-framework-foundry-hosting" },
+    { name = "azure-identity" },
     { name = "catalog" },
+    { name = "openai" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
 ]
 
 [package.metadata]
@@ -670,7 +674,11 @@ requires-dist = [
     { name = "agent-framework-core", specifier = "==1.26.0" },
     { name = "agent-framework-foundry", specifier = "==1.16.2" },
     { name = "agent-framework-foundry-hosting", specifier = "==1.0.0b261112" },
+    { name = "azure-identity" },
     { name = "catalog", editable = "packages/catalog" },
+    { name = "openai" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
 ]
 
 [[package]]

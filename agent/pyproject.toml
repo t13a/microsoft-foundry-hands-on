@@ -9,7 +9,16 @@ dependencies = [
     "agent-framework-core==1.26.0",
     "agent-framework-foundry==1.16.2",
     "agent-framework-foundry-hosting==1.0.0b261112",
+    # Imported directly; versions come from the agent framework's dependencies.
+    "azure-identity",
+    "openai",
+    "opentelemetry-api",
+    "pydantic",
 ]
+
+[project.scripts]
+consultation-server = "consultation.server:main"
+consultation-drive = "consultation.drive:main"
 
 [tool.uv.sources]
 catalog = { workspace = true }
