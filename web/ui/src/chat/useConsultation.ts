@@ -18,7 +18,14 @@ import {
 
 type Input = OpenAI.Responses.ResponseCreateParams['input']
 
-const client = new OpenAI({ baseURL: `${location.origin}/api`, apiKey: 'unused', dangerouslyAllowBrowser: true })
+// No API key: the BFF authorizes the call. Drop the SDK's Authorization header so the
+// browser's Basic auth credentials for the site are sent instead (N-SEC-01).
+const client = new OpenAI({
+  baseURL: `${location.origin}/api`,
+  apiKey: 'unused',
+  dangerouslyAllowBrowser: true,
+  defaultHeaders: { Authorization: null },
+})
 
 // Locally the caller picks the session; on Foundry the BFF drops it from the first request
 // and the platform's session from the first response is used from then on (docs/design.md 6.2).

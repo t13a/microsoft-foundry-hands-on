@@ -62,6 +62,13 @@ button {
 
 /* --- layout --- */
 
+/* Page styles follow the content column's width, not the viewport's: with the chat panel
+   open, the column is much narrower than the window. The fixed bottom button stays outside,
+   because a container becomes the containing block of fixed descendants. */
+.content-area {
+  container: content / inline-size;
+}
+
 .layout {
   min-height: 100vh;
 }
@@ -213,7 +220,7 @@ button {
   margin: 28px 0 12px;
 }
 
-@media (min-width: 900px) {
+@container content (min-width: 720px) {
   .page {
     padding: 36px 48px 120px;
   }
@@ -298,7 +305,7 @@ button {
   display: none;
 }
 
-@media (min-width: 900px) {
+@container content (min-width: 720px) {
   .hero {
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
     gap: 48px;
@@ -400,7 +407,7 @@ button {
   color: var(--sub);
 }
 
-@media (min-width: 900px) {
+@container content (min-width: 720px) {
   .category-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
@@ -457,7 +464,7 @@ button {
   margin: 20px 0 8px;
 }
 
-@media (min-width: 900px) {
+@container content (min-width: 720px) {
   .breadcrumbs {
     font-size: 14px;
     gap: 8px;
@@ -564,7 +571,7 @@ button {
   margin: 12px 0 16px;
 }
 
-@media (min-width: 900px) {
+@container content (min-width: 720px) {
   .service-card {
     padding: 20px 22px;
     gap: 8px;

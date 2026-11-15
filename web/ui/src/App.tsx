@@ -39,7 +39,9 @@ export default function App() {
           </aside>
         )}
         <div className="layout-content">
-          <Content />
+          <div className="content-area">
+            <Content />
+          </div>
           <ConsultButton />
         </div>
       </div>
