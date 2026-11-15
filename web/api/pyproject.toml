@@ -1,0 +1,17 @@
+[project]
+name = "web-api"
+version = "0.1.0"
+description = "BFF: SPA の配信、カタログ API、Responses の中継"
+requires-python = ">=3.13"
+dependencies = [
+    "catalog",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+]
+
+[tool.uv.sources]
+catalog = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"

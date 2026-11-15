@@ -1,0 +1,19 @@
+[project]
+name = "consultation"
+version = "0.1.0"
+description = "相談のワークフロー (Foundry のホスト型エージェント)"
+requires-python = ">=3.13"
+dependencies = [
+    "catalog",
+    # Pinned to the versions verified in spikes/responses-workflow.
+    "agent-framework-core==1.26.0",
+    "agent-framework-foundry==1.16.2",
+    "agent-framework-foundry-hosting==1.0.0b261112",
+]
+
+[tool.uv.sources]
+catalog = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"

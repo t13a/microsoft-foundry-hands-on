@@ -1,0 +1,34 @@
+/* Design tokens decided in the design review (docs/design.md 3.3, palette "hidamari"). */
+:root {
+  --bg: #fffdf8;
+  --surface: #ffffff;
+  --header: #fff0d9;
+  --bubble: #fff3e3;
+  --soft: #fff0d9;
+  --border: #f2e4cf;
+  --field: #e8d5b9;
+  --primary: #2849a6;
+  --accent: #a8532a;
+  --text: #33291f;
+  --body: #4f443a;
+  --sub: #6f6255;
+  --disabled: #c3ccea;
+  --hl-bg: #fff6d6;
+  --hl-ring: #d99a1e;
+  --hl-badge: #fce7a8;
+  --hl-badge-text: #7a4a00;
+  --shadow: 0 1px 2px rgba(40, 30, 20, 0.06), 0 6px 20px rgba(40, 30, 20, 0.08);
+  --font-body: 'Noto Sans JP', sans-serif;
+  --font-heading: 'Zen Maru Gothic', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--primary);
+}

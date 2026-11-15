@@ -563,16 +563,18 @@ BFF と SPA は、1 つの Container Apps のアプリ (`web`) にまとめる�
 
 ```text
 /
+├── pyproject.toml           # uv のワークスペース (メンバー: packages/catalog、agent、web/api)
 ├── azure.yaml               # azd の定義
 ├── infra/                   # Bicep
-├── agent/                   # ホスト型エージェント (Python)
-│   ├── workflow.py          # ワークフローのグラフと進行役
+├── agent/                   # ホスト型エージェント (Python、パッケージ名 consultation)
+│   ├── src/consultation/
+│   │   ├── workflow.py      # ワークフローのグラフと進行役
+│   │   ├── tools.py         # ツールの実装
+│   │   └── stub.py          # ローカル用のスタブのチャットクライアント
 │   ├── content/             # 案内の文言、フォーム (JSON Schema)、上限の値
-│   ├── prompt-agent/        # プロンプト エージェントの指示文とツール定義の初期版
-│   ├── tools/               # ツールの実装
-│   └── stub/                # ローカル用のスタブのチャットクライアント
+│   └── prompt-agent/        # プロンプト エージェントの指示文とツール定義の初期版
 ├── web/
-│   ├── api/                 # BFF (FastAPI)
+│   ├── api/                 # BFF (FastAPI、パッケージ名 web_api)
 │   └── ui/                  # SPA (React + TypeScript)
 ├── packages/catalog/        # CSV の読み込み・検証・検索・URL 生成 (共有)
 ├── data/                    # 架空データの CSV
