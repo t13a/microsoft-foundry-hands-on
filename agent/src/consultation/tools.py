@@ -10,6 +10,7 @@ import os
 from functools import cache
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import unquote
 
 import catalog
 from agent_framework import FunctionTool, tool
@@ -19,9 +20,9 @@ from pydantic import Field
 DATA_DIR_ENV = "CATALOG_DIR"
 
 # 探索の結果に載せる数の上限。件数 (count) は上限に関係なく全体の数を返す。
-MAX_SERVICES = 20
-# list_categories が返す説明の冒頭の長さ。
-SUMMARY_LENGTH = 80
+MAX_SERVICES = 10
+# 結果に載せる説明の冒頭の長さ。結果は会話の履歴として毎回モデルに送られるので、短くする。
+SUMMARY_LENGTH = 60
 
 DISPLAY_FAILED = "表示できませんでした"
 
@@ -43,17 +44,23 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def _summary(text: str) -> str:
-    line = " ".join(text.split())
-    return line if len(line) <= SUMMARY_LENGTH else line[:SUMMARY_LENGTH] + "…"
+def _summary(text: str, length: int = SUMMARY_LENGTH) -> str:
+    line = " ".join(text.replace("#", "").split())
+    return line if len(line) <= length else line[:length] + "…"
+
+
+def _url(url: str) -> str:
+    """モデルに渡す URL。デコードした形の方がずっと少ないトークンで済み、propose_display が
+    エンコードした決まった形に戻す (基本設計書 5.2)。"""
+    return unquote(url)
 
 
 def _service(service: catalog.Service) -> dict[str, Any]:
+    # Contact details stay out: the agent must not answer them in chat (F-AGT-10).
     return {
         "name": service.name,
-        "categoryPath": list(service.category_path),
-        "url": catalog.category_url(service.category_path, [service.name]),
-        "description": service.description,
+        "url": _url(catalog.category_url(service.category_path, [service.name])),
+        "summary": _summary(service.description),
     }
 
 
@@ -71,8 +78,8 @@ def list_categories(data: Catalog, path: list[str] | None = None) -> dict[str, A
         "categories": [
             {
                 "name": c.name,
-                "description": _summary(c.description),
-                "url": catalog.category_url(c.path),
+                "summary": _summary(c.description),
+                "url": _url(catalog.category_url(c.path)),
             }
             for c in children
         ],
@@ -85,13 +92,14 @@ def get_category(data: Catalog, path: list[str]) -> dict[str, Any]:
         return {"error": "カテゴリが見つかりません", "path": list(path)}
     return {
         "name": category.name,
-        "categoryPath": list(category.path),
-        "url": catalog.category_url(category.path),
-        "description": category.description,
+        "path": list(category.path),
+        "url": _url(catalog.category_url(category.path)),
+        "summary": _summary(category.description, 200),
         "children": [
-            {"name": c.name, "url": catalog.category_url(c.path)} for c in category.children
+            {"name": c.name, "url": _url(catalog.category_url(c.path))} for c in category.children
         ],
-        "services": [_service(s) for s in category.services],
+        "serviceCount": len(category.services),
+        "services": [_service(s) for s in category.services[:MAX_SERVICES]],
     }
 
 
@@ -99,7 +107,7 @@ def search_services(data: Catalog, query: str) -> dict[str, Any]:
     services = catalog.search(data, query)
     result: dict[str, Any] = {"query": query, "count": len(services)}
     if services:
-        result["url"] = catalog.search_url(query)
+        result["url"] = _url(catalog.search_url(query))
         result["services"] = [_service(s) for s in services[:MAX_SERVICES]]
     return result
 

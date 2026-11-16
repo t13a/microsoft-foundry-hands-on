@@ -161,7 +161,7 @@ class ScriptedChatClient(FunctionInvocationLayer, BaseChatClient):
                     return [_call("propose_display", urls=[result["url"]])]
                 if result.get("children"):
                     child = result["children"][0]["name"]
-                    return [_call("get_category", path=[*result["categoryPath"], child])]
+                    return [_call("get_category", path=[*result["path"], child])]
                 return [_text("このカテゴリにはサービスがありませんでした。")]
             case "propose_display":
                 if "url" in result:
@@ -189,8 +189,8 @@ class ScriptedChatClient(FunctionInvocationLayer, BaseChatClient):
         if self.scenario == "search":
             return [_call("propose_display", urls=[result["url"]])]
         if self.scenario == "multiple":
-            path = services[0]["categoryPath"]
-            same = [s["url"] for s in services if s["categoryPath"] == path][:2]
+            path = services[0]["url"].split("#")[0]
+            same = [s["url"] for s in services if s["url"].split("#")[0] == path][:2]
             return [_call("propose_display", urls=same)]
         return [_call("propose_display", urls=[services[0]["url"]])]
 

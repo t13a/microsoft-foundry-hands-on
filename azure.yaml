@@ -59,4 +59,4 @@ services:
                 version: "2025-08-07"
               sku:
                 name: GlobalStandard
-                capacity: 50
+                capacity: 200

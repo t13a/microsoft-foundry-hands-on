@@ -2,7 +2,7 @@ import asyncio
 import importlib.util
 import json
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import catalog
 import pytest
@@ -24,11 +24,12 @@ def data():
 def test_search_services_returns_urls_of_existing_pages(data):
     result = tools.search_services(data, "予防接種")
     assert result["count"] == 4
-    assert result["url"] == catalog.search_url("予防接種")
+    # URLs are decoded for the model (fewer tokens); propose_display re-encodes them.
+    assert result["url"] == unquote(catalog.search_url("予防接種"))
     first = result["services"][0]
     assert first["name"] == "予防接種相談窓口"
-    assert first["categoryPath"] == list(PATH)
-    assert first["url"] == catalog.category_url(PATH, ["予防接種相談窓口"])
+    assert first["url"] == unquote(catalog.category_url(PATH, ["予防接種相談窓口"]))
+    assert set(first) == {"name", "url", "summary"}  # no contact details (F-AGT-10)
     assert all(catalog.resolve(data, s["url"]) for s in result["services"])
 
 
@@ -39,8 +40,8 @@ def test_search_services_without_hits_has_no_url(data):
 def test_list_categories(data):
     top = tools.list_categories(data)
     assert [c["name"] for c in top["categories"]][:2] == ["子育て・教育", "健康・医療"]
-    assert top["categories"][0]["url"] == catalog.category_url(("子育て・教育",))
-    assert all(len(c["description"]) <= tools.SUMMARY_LENGTH + 1 for c in top["categories"])
+    assert top["categories"][0]["url"] == "/c/子育て・教育"
+    assert all(len(c["summary"]) <= tools.SUMMARY_LENGTH + 1 for c in top["categories"])
     children = tools.list_categories(data, ["子育て・教育"])
     assert "健診・予防接種" in [c["name"] for c in children["categories"]]
     assert "error" in tools.list_categories(data, ["存在しない"])
@@ -48,14 +49,14 @@ def test_list_categories(data):
 
 def test_get_category(data):
     result = tools.get_category(data, list(PATH))
-    assert result["url"] == ENCODED
+    assert result["url"] == unquote(ENCODED)
     assert result["children"] == []
     assert [s["name"] for s in result["services"]] == [
         "予防接種相談窓口",
         "定期予防接種",
         "任意予防接種費用助成",
     ]
-    assert result["services"][1]["url"] == catalog.category_url(PATH, ["定期予防接種"])
+    assert result["services"][1]["url"] == unquote(catalog.category_url(PATH, ["定期予防接種"]))
     assert "error" in tools.get_category(data, ["存在しない"])
 
 

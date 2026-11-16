@@ -19,12 +19,14 @@ from agent_framework import (
     AgentExecutorRequest,
     AgentExecutorResponse,
     AgentResponse,
+    CheckpointID,
     Executor,
     Message,
     ResponseStream,
     SupportsAgentRun,
     Workflow,
     WorkflowBuilder,
+    WorkflowCheckpoint,
     WorkflowContext,
     agent_middleware,
     handler,
@@ -36,6 +38,7 @@ from agent_framework_foundry_hosting import (
     HostedResponseRequest,
     WorkflowTurn,
 )
+from agent_framework_foundry_hosting._state_store import FoundryCheckpointStore
 from opentelemetry import trace
 
 from consultation import content as content_data
@@ -264,6 +267,9 @@ def build_agent(tools: list, mode: str | None = None) -> SupportsAgentRun:
         # agent's own version), which would otherwise pin the prompt agent to that version.
         agent_version="",
         credential=DefaultAzureCredential(),
+        # A model call once stalled for over four minutes; the web ingress drops idle connections
+        # at 240 s. Fail the call after 60 s instead and let the client retry.
+        timeout=60,
         tools=tools,
         # 会話の履歴はワークフローのホストが持つので、エージェント側には保存しない。
         default_options={"store": False},
@@ -297,8 +303,38 @@ async def parse_response(request: HostedResponseRequest) -> WorkflowTurn:
     return WorkflowTurn(input=await request.get_input_text() or "start")
 
 
+class PruningCheckpointStore(FoundryCheckpointStore):
+    """古いチェックポイントを消していく、Foundry の状態ストアのチェックポイント。
+
+    ホストは要求のたびに最新のチェックポイントを探すため、保存済みのものを 1 件ずつ読む。
+    消さないと読み込みが相談の長さに比例して遅くなる (1 回の発言で 70 回を超える読み込み)。
+    保存のたびに 2 つ前を消し、最新とその親だけを残す。
+    """
+
+    async def save(self, checkpoint: WorkflowCheckpoint) -> CheckpointID:
+        checkpoint_id = await super().save(checkpoint)
+        if checkpoint.previous_checkpoint_id:
+            try:
+                parent = await self.load(checkpoint.previous_checkpoint_id)
+                if parent.previous_checkpoint_id:
+                    await self.delete(parent.previous_checkpoint_id)
+            except Exception:  # pruning is best effort; the saved checkpoint is what matters
+                logger.warning("Could not prune old checkpoints", exc_info=True)
+        return checkpoint_id
+
+
+class PruningCheckpointStoreProvider(CheckpointStoreProvider):
+    def get_store_for_scope(self, *, scope, context_id, platform_context):
+        return PruningCheckpointStore(
+            context_id,
+            platform_context,
+            allowed_checkpoint_types=self._allowed_checkpoint_types,
+            scope=scope,
+        )
+
+
 def checkpoint_store_provider() -> CheckpointStoreProvider:
     # チェックポイントに入る独自の型は、許可する型の一覧に登録する。
-    return CheckpointStoreProvider(
+    return PruningCheckpointStoreProvider(
         allowed_checkpoint_types=[f"{InputRequest.__module__}:{InputRequest.__qualname__}"],
     )

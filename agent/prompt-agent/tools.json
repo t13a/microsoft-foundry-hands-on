@@ -7,39 +7,52 @@
       "properties": {
         "path": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "カテゴリパス (上の階層から順にカテゴリ名を並べる)。空なら最上位"
         }
       },
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "additionalProperties": false
     }
   },
   {
     "name": "get_category",
-    "description": "カテゴリの説明の全文と URL、子カテゴリ (URL つき)、所属サービス (強調表示つきの URL つき) を返す。",
+    "description": "カテゴリの説明の冒頭と URL、子カテゴリ (URL つき)、所属サービス (強調表示つきの URL と説明の冒頭、最大 10 件) と件数を返す。",
     "parameters": {
       "type": "object",
       "properties": {
         "path": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "カテゴリパス (上の階層から順にカテゴリ名を並べる)"
         }
       },
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "additionalProperties": false
     }
   },
   {
     "name": "search_services",
-    "description": "キーワードでサービスを検索し、一致したサービス (カテゴリパスと強調表示つきの URL つき)、件数、検索結果の URL を返す。",
+    "description": "キーワードでサービスを検索し、一致したサービス (強調表示つきの URL と説明の冒頭、最大 10 件)、件数、検索結果の URL を返す。",
     "parameters": {
       "type": "object",
       "properties": {
-        "query": { "type": "string", "description": "検索語 (空白区切りで AND)" }
+        "query": {
+          "type": "string",
+          "description": "検索語 (空白区切りで AND)"
+        }
       },
-      "required": ["query"],
+      "required": [
+        "query"
+      ],
       "additionalProperties": false
     }
   },
@@ -51,11 +64,15 @@
       "properties": {
         "urls": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "探索のツールが返した URL をそのまま並べる。同じカテゴリのサービスだけをまとめられる"
         }
       },
-      "required": ["urls"],
+      "required": [
+        "urls"
+      ],
       "additionalProperties": false
     }
   },
@@ -67,22 +84,36 @@
       "properties": {
         "options": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "推奨する選択肢の文言"
         }
       },
-      "required": ["options"],
+      "required": [
+        "options"
+      ],
       "additionalProperties": false
     }
   },
   {
     "name": "propose_end",
     "description": "相談を終了してよいか、利用者に確認する。承認されると相談が終わる。",
-    "parameters": { "type": "object", "properties": {}, "required": [], "additionalProperties": false }
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
   },
   {
     "name": "show_emergency_contacts",
     "description": "緊急時の相談先 (警察、消防・救急、相談ダイヤル) の定型の案内を画面に表示する。",
-    "parameters": { "type": "object", "properties": {}, "required": [], "additionalProperties": false }
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
   }
 ]

@@ -9,10 +9,12 @@ from typing import Any
 
 from agent_framework_foundry_hosting import ResponsesHostServer
 
+from consultation import hosting_patches
 from consultation.workflow import build_workflow, checkpoint_store_provider, parse_response
 
 
 def create_server(**kwargs: Any) -> ResponsesHostServer:
+    hosting_patches.apply()
     return ResponsesHostServer(
         workflow=build_workflow,
         parse_response=parse_response,
