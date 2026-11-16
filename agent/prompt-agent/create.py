@@ -35,8 +35,8 @@ def definition(model: str) -> PromptAgentDefinition:
         model=model,
         instructions=instructions,
         tools=[FunctionTool(**t, strict=True) for t in tools],
-        # gpt-5 family models reason before answering; a low effort keeps each turn short.
-        reasoning=Reasoning(effort=os.environ.get("SEARCH_AGENT_REASONING", "low")),
+        # gpt-5 family models reason before answering; the minimal effort keeps each turn short.
+        reasoning=Reasoning(effort=os.environ.get("SEARCH_AGENT_REASONING", "minimal")),
     )
 
 

@@ -19,8 +19,8 @@ export type Item =
   | { kind: 'user'; id: string; text: string }
   | { kind: 'status'; id: string; done: boolean; response: number }
   | { kind: 'opened'; id: string }
-  | { kind: 'card'; id: string; url: string; count: number }
-  | { kind: 'suggestions'; id: string; options: string[] }
+  | { kind: 'card'; id: string; url: string; count: number; response: number }
+  | { kind: 'suggestions'; id: string; options: string[]; response: number }
   | { kind: 'form'; id: string; callId: string; form: FormName; schema: JsonSchema; skippable: boolean; submitted?: Record<string, unknown> }
   | { kind: 'end'; id: string; approvalId: string; approved?: boolean }
   | { kind: 'emergency'; id: string }
@@ -72,13 +72,19 @@ function parse(text: unknown): unknown {
   }
 }
 
+// The agent calls its tools before it writes, but the card and the suggestions read as
+// following the text, so the response's text goes in front of them.
+const FOLLOWS_TEXT = new Set<Item['kind']>(['card', 'suggestions'])
+
 function appendText(state: ChatState, text: string): ChatState {
   if (!text) return state
-  const last = state.items.at(-1)
-  if (last?.kind === 'assistant' && last.response === state.response) {
-    return { ...state, items: [...state.items.slice(0, -1), { ...last, text: last.text + text }] }
-  }
-  return { ...state, items: [...state.items, { kind: 'assistant', id: nextId(), text, response: state.response }] }
+  const { items } = state
+  let end = items.length
+  while (end > 0 && FOLLOWS_TEXT.has(items[end - 1].kind) && (items[end - 1] as { response: number }).response === state.response) end--
+  const last = items[end - 1]
+  const continues = last?.kind === 'assistant' && last.response === state.response
+  const merged: Item = continues ? { ...last, text: last.text + text } : { kind: 'assistant', id: nextId(), text, response: state.response }
+  return { ...state, items: [...items.slice(0, continues ? end - 1 : end), merged, ...items.slice(end)] }
 }
 
 function add(state: ChatState, item: Item): ChatState {
@@ -136,7 +142,7 @@ function applyItem(state: ChatState, item: OutputItem): ChatState {
     }
     if (name === 'suggest_replies') {
       const options = Array.isArray(args?.options) ? (args.options as unknown[]).map(String) : []
-      return options.length ? add(next, { kind: 'suggestions', id: nextId(), options }) : next
+      return options.length ? add(next, { kind: 'suggestions', id: nextId(), options, response: state.response }) : next
     }
     if (name === 'show_emergency_contacts') return add(next, { kind: 'emergency', id: nextId() })
     if (SEARCH_TOOLS.has(name)) {
@@ -156,7 +162,7 @@ function applyItem(state: ChatState, item: OutputItem): ChatState {
       }
     }
     if (name === 'propose_display' && typeof result?.url === 'string') {
-      return add(state, { kind: 'card', id: nextId(), url: result.url, count: Number(result.count ?? 0) })
+      return add(state, { kind: 'card', id: nextId(), url: result.url, count: Number(result.count ?? 0), response: state.response })
     }
     return state
   }

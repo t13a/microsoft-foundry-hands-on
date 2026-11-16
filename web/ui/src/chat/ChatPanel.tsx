@@ -155,6 +155,8 @@ export default function ChatPanel() {
 
 function TextBubble({ role, text }: { role: string; text: string }) {
   if (role === 'user') return <p className="bubble is-user">{text}</p>
+  // The runtime adds an empty assistant message while a response is running; the typing dots stand for it.
+  if (!text) return null
   return (
     <div className="assistant-row">
       <span className="assistant-avatar" aria-hidden="true">

@@ -51,10 +51,20 @@ describe('chat state', () => {
       completed('resp-2', [ask]),
     ]
     const state = run(initialState('s'), events)
-    expect(state.items.map((i) => i.kind)).toEqual(['assistant', 'status', 'card', 'assistant'])
+    // The text written after the card goes in front of it.
+    expect(state.items.map((i) => i.kind)).toEqual(['assistant', 'status', 'assistant', 'card'])
     expect(state.items[1]).toMatchObject({ done: true })
-    expect(state.items[2]).toMatchObject({ url: yobou, count: 1 })
+    expect(state.items[3]).toMatchObject({ url: yobou, count: 1 })
     expect(state.pending).toEqual({ kind: 'message', callId: 'req-1' })
+  })
+
+  it('puts the question in front of its suggestions', () => {
+    const state = run(initialState('s'), [
+      done(call('c1', 'suggest_replies', { options: ['見つかった'] })),
+      delta('お探しのものは'),
+      delta('見つかりましたか？'),
+    ])
+    expect(state.items).toMatchObject([{ kind: 'assistant', text: 'お探しのものは見つかりましたか？' }, { kind: 'suggestions' }])
   })
 
   it('drops a failed display proposal', () => {
